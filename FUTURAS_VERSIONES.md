@@ -1,0 +1,69 @@
+# Mejoras y futuras versiones
+
+**Creado:** 13 de septiembre de 2026
+**Estado:** lista de evolución; no implica fecha de entrega
+
+## Versión 1.1 prevista
+
+### Calendario de pagos
+
+- Mostrar pagos previstos y realizados por fecha.
+- Permitir navegar por meses y abrir el movimiento o planificación relacionada.
+- Definir durante la preparación de 1.1 si el calendario incluirá recordatorios,
+  recurrencias pendientes o únicamente una vista temporal.
+
+El calendario de pagos se separa de los avisos de facturas: la vista está prevista
+para 1.1, mientras que las notificaciones continúan aplazadas.
+
+## Mejoras candidatas sin versión asignada
+
+- Tema oscuro.
+- Mostrar el presupuesto restante de cada proyecto en `Mis proyectos`, sin sumar
+  ni mezclar los importes.
+- Avisos de facturas y vencimientos.
+- Importación CSV mediante plantilla propia y detección de duplicados.
+- Categorización automática siempre modificable.
+- División de gastos, cálculo de deudas y liquidaciones entre miembros.
+- Campos personalizados configurables por proyecto.
+- Presupuestos y límites específicos para subcategorías.
+- Módulo de inversiones con cuentas de inversión, aportaciones, valoración de
+  cartera, rendimientos y separación entre capital aportado y valor actual.
+- Conexión y sincronización bancaria automática.
+- Fotografías de recibos y reconocimiento OCR.
+- Varias monedas y conversión de divisas.
+- Conciliación bancaria.
+- Predicciones y proyecciones financieras.
+- Informes PDF y Excel.
+- Notificaciones por correo, navegador o móvil.
+- Aplicación instalable y funcionamiento sin conexión.
+- API, webhooks e integraciones externas.
+- Rol de solo lectura y permisos personalizados.
+- Aprobación de gastos.
+- Funciones fiscales y gestión de suscripciones.
+
+## Seguridad condicionada al despliegue
+
+- El doble factor se aplaza mientras la aplicación sea exclusivamente local, pero
+  deberá revisarse antes de cualquier publicación en Internet.
+- La opción preferida será un código TOTP generado por una aplicación
+  autenticadora o una alternativa resistente al phishing. Como opción secundaria
+  podrá integrarse un proveedor externo para enviar códigos SMS, con teléfono
+  verificado, límites de reintentos, códigos de un solo uso, caducidad breve y un
+  método alternativo de recuperación.
+- El acceso remoto requerirá un hito independiente de HTTPS, gestión de secretos,
+  copias cifradas, restauración probada, monitorización y endurecimiento.
+
+## Normas de esta lista
+
+- Una mejora no entra en una versión hasta definir requisitos y criterios de
+  aceptación.
+- La prioridad se decidirá con la experiencia de uso de la versión 1.0.
+- Las mejoras no deben romper el aislamiento entre proyectos ni la exactitud del
+  historial financiero.
+
+## Historial
+
+| Fecha | Cambio | Motivo |
+|---|---|---|
+| 13-09-2026 | Creación de la lista, reserva del calendario de pagos para 1.1 y registro del modo oscuro y demás funciones aplazadas. | Conservar las ideas sin ampliar silenciosamente el alcance de 1.0. |
+| 13-09-2026 | Añadida la autenticación multifactor futura con TOTP preferido y SMS opcional mediante proveedor externo. | Preparar la verificación de inicios de sesión sin añadir coste ni dependencias a la versión local. |

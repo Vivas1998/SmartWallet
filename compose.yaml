@@ -1,0 +1,122 @@
+name: smartwallet
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    working_dir: /var/www/html
+    command: ["sh", "/usr/local/bin/smartwallet-start"]
+    environment:
+      APP_URL: "http://localhost:${SMARTWALLET_APP_PORT:-8010}"
+    ports:
+      - "127.0.0.1:${SMARTWALLET_APP_PORT:-8010}:8000"
+    volumes:
+      - ./web:/var/www/html
+      - composer_vendor:/var/www/html/vendor
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@file_get_contents(\"http://127.0.0.1:8000/acceder\") === false ? 1 : 0);'"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    networks:
+      - smartwallet
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    working_dir: /var/www/html
+    command: ["sh", "/usr/local/bin/smartwallet-scheduler-start"]
+    environment:
+      APP_URL: "http://localhost:${SMARTWALLET_APP_PORT:-8010}"
+    volumes:
+      - ./web:/var/www/html
+      - composer_vendor:/var/www/html/vendor
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - smartwallet
+
+  node:
+    image: node:24.13.0-alpine
+    working_dir: /var/www/html
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    environment:
+      VITE_DEV_SERVER_PORT: "${SMARTWALLET_VITE_PORT:-5174}"
+      VITE_APP_PORT: "${SMARTWALLET_APP_PORT:-8010}"
+      VITE_ACCEPTANCE_APP_PORT: "${SMARTWALLET_ACCEPTANCE_APP_PORT:-8011}"
+    ports:
+      - "127.0.0.1:${SMARTWALLET_VITE_PORT:-5174}:5173"
+    volumes:
+      - ./web:/var/www/html
+      - node_modules:/var/www/html/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5173/@vite/client"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    networks:
+      - smartwallet
+
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "127.0.0.1:${SMARTWALLET_MYSQL_PORT:-3308}:3306"
+    environment:
+      MYSQL_DATABASE: smartwallet
+      MYSQL_USER: smartwallet
+      MYSQL_PASSWORD: smartwallet_dev
+      MYSQL_ROOT_PASSWORD: smartwallet_root_dev
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -psmartwallet_root_dev --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - smartwallet
+
+  mysql_test:
+    image: mysql:8.4
+    profiles: ["testing"]
+    environment:
+      MYSQL_DATABASE: smartwallet_test
+      MYSQL_USER: smartwallet_test
+      MYSQL_PASSWORD: smartwallet_test
+      MYSQL_ROOT_PASSWORD: smartwallet_root_test
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -psmartwallet_root_test --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - smartwallet
+
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    ports:
+      - "127.0.0.1:${SMARTWALLET_MAILPIT_PORT:-8026}:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+    networks:
+      - smartwallet
+
+networks:
+  smartwallet:
+
+volumes:
+  composer_vendor:
+  mysql_data:
+  node_modules:

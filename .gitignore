@@ -4,3 +4,5 @@
 *.log
 *.sql
 *.sql.gz
+!web/database/ddl/
+!web/database/ddl/smartwallet.mysql.sql

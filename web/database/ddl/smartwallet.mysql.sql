@@ -1,0 +1,602 @@
+-- SmartWallet: estructura limpia de base de datos
+-- Motor objetivo: MySQL 8.4 LTS
+-- Generado el 23 de septiembre de 2026 desde 17 migraciones Laravel.
+-- Compatible con SmartWallet 1.1.0.
+-- No contiene seeders, usuarios de ejemplo ni datos de negocio.
+-- Los únicos INSERT registran el historial técnico de migraciones aplicado.
+-- Es deliberadamente no destructivo: no contiene DROP TABLE.
+-- Debe ejecutarse con una cuenta autorizada para crear la base y sus tablas.
+-- Si una tabla ya existe, MySQL detendrá la importación para proteger sus datos.
+
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+00:00';
+
+CREATE DATABASE IF NOT EXISTS `smartwallet`
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE `smartwallet`;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+CREATE TABLE `account_entries` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `movement_id` bigint unsigned NOT NULL,
+  `project_id` bigint unsigned NOT NULL,
+  `financial_account_id` bigint unsigned NOT NULL,
+  `signed_amount_cents` bigint NOT NULL,
+  `occurred_on` date NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `account_entries_movement_id_foreign` (`movement_id`),
+  KEY `account_entries_financial_account_id_foreign` (`financial_account_id`),
+  KEY `account_entries_balance_lookup` (`project_id`,`financial_account_id`,`occurred_on`),
+  CONSTRAINT `account_entries_financial_account_id_foreign` FOREIGN KEY (`financial_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `account_entries_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `account_entries_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `audit_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `actor_user_id` bigint unsigned DEFAULT NULL,
+  `subject_type` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject_id` bigint unsigned NOT NULL,
+  `action` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `before_values` json DEFAULT NULL,
+  `after_values` json DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `audit_logs_actor_user_id_foreign` (`actor_user_id`),
+  KEY `audit_logs_project_id_created_at_index` (`project_id`,`created_at`),
+  KEY `audit_logs_project_id_subject_type_subject_id_index` (`project_id`,`subject_type`,`subject_id`),
+  KEY `audit_logs_project_id_actor_user_id_action_index` (`project_id`,`actor_user_id`,`action`),
+  CONSTRAINT `audit_logs_actor_user_id_foreign` FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `audit_logs_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `budget_template_limits` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `budget_template_id` bigint unsigned NOT NULL,
+  `category_id` bigint unsigned NOT NULL,
+  `limit_cents` bigint unsigned NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `budget_template_limits_budget_template_id_category_id_unique` (`budget_template_id`,`category_id`),
+  KEY `budget_template_limits_category_id_foreign` (`category_id`),
+  CONSTRAINT `budget_template_limits_budget_template_id_foreign` FOREIGN KEY (`budget_template_id`) REFERENCES `budget_templates` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `budget_template_limits_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `budget_templates` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `effective_from_month` date NOT NULL,
+  `total_limit_cents` bigint unsigned NOT NULL DEFAULT '0',
+  `created_by_user_id` bigint unsigned DEFAULT NULL,
+  `updated_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `budget_templates_project_id_effective_from_month_unique` (`project_id`,`effective_from_month`),
+  KEY `budget_templates_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `budget_templates_updated_by_user_id_foreign` (`updated_by_user_id`),
+  CONSTRAINT `budget_templates_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `budget_templates_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `budget_templates_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `cache` (
+  `key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expiration` bigint NOT NULL,
+  PRIMARY KEY (`key`),
+  KEY `cache_expiration_index` (`expiration`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `cache_locks` (
+  `key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `owner` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expiration` bigint NOT NULL,
+  PRIMARY KEY (`key`),
+  KEY `cache_locks_expiration_index` (`expiration`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `categories` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `parent_id` bigint unsigned DEFAULT NULL,
+  `type` enum('expense','income') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `color` char(7) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `icon` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `position` int unsigned NOT NULL DEFAULT '0',
+  `is_initial` tinyint(1) NOT NULL DEFAULT '0',
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `archived_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `categories_parent_id_foreign` (`parent_id`),
+  KEY `categories_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `categories_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `categories_archived_by_user_id_foreign` (`archived_by_user_id`),
+  KEY `categories_project_id_type_parent_id_position_index` (`project_id`,`type`,`parent_id`,`position`),
+  KEY `categories_project_id_archived_at_index` (`project_id`,`archived_at`),
+  CONSTRAINT `categories_archived_by_user_id_foreign` FOREIGN KEY (`archived_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `categories_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `categories_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `categories_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `failed_jobs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `connection` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `queue` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `payload` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `exception` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `failed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `financial_accounts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` enum('checking','savings','cash','credit_card','external_investment') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `initial_balance_cents` bigint NOT NULL DEFAULT '0',
+  `initial_balance_date` date NOT NULL,
+  `credit_limit_cents` bigint unsigned DEFAULT NULL,
+  `color` char(7) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `icon` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `position` int unsigned NOT NULL DEFAULT '0',
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `financial_accounts_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `financial_accounts_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `financial_accounts_project_id_archived_at_position_index` (`project_id`,`archived_at`,`position`),
+  CONSTRAINT `financial_accounts_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `financial_accounts_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `financial_accounts_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `goal_allocations` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `savings_goal_id` bigint unsigned NOT NULL,
+  `movement_id` bigint unsigned NOT NULL,
+  `direction` enum('contribution','withdrawal') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `goal_allocations_movement_id_unique` (`movement_id`),
+  KEY `goal_allocations_savings_goal_id_direction_index` (`savings_goal_id`,`direction`),
+  CONSTRAINT `goal_allocations_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `goal_allocations_savings_goal_id_foreign` FOREIGN KEY (`savings_goal_id`) REFERENCES `savings_goals` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `job_batches` (
+  `id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_jobs` int NOT NULL,
+  `pending_jobs` int NOT NULL,
+  `failed_jobs` int NOT NULL,
+  `failed_job_ids` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `options` mediumtext COLLATE utf8mb4_unicode_ci,
+  `cancelled_at` int DEFAULT NULL,
+  `created_at` int NOT NULL,
+  `finished_at` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `jobs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `queue` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `payload` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `attempts` tinyint unsigned NOT NULL,
+  `reserved_at` int unsigned DEFAULT NULL,
+  `available_at` int unsigned NOT NULL,
+  `created_at` int unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `jobs_queue_index` (`queue`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `migrations` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `migration` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `batch` int NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `monthly_budget_limits` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `monthly_budget_id` bigint unsigned NOT NULL,
+  `category_id` bigint unsigned NOT NULL,
+  `limit_cents` bigint unsigned NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `monthly_budget_limits_monthly_budget_id_category_id_unique` (`monthly_budget_id`,`category_id`),
+  KEY `monthly_budget_limits_category_id_foreign` (`category_id`),
+  CONSTRAINT `monthly_budget_limits_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `monthly_budget_limits_monthly_budget_id_foreign` FOREIGN KEY (`monthly_budget_id`) REFERENCES `monthly_budgets` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `monthly_budgets` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `month` date NOT NULL,
+  `total_limit_cents` bigint unsigned NOT NULL DEFAULT '0',
+  `source_template_id` bigint unsigned DEFAULT NULL,
+  `created_by_user_id` bigint unsigned DEFAULT NULL,
+  `updated_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `monthly_budgets_project_id_month_unique` (`project_id`,`month`),
+  KEY `monthly_budgets_source_template_id_foreign` (`source_template_id`),
+  KEY `monthly_budgets_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `monthly_budgets_updated_by_user_id_foreign` (`updated_by_user_id`),
+  CONSTRAINT `monthly_budgets_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `monthly_budgets_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `monthly_budgets_source_template_id_foreign` FOREIGN KEY (`source_template_id`) REFERENCES `budget_templates` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `monthly_budgets_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `monthly_leftover_allocations` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `movement_id` bigint unsigned NOT NULL,
+  `budget_month` date NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `monthly_leftover_allocations_movement_id_unique` (`movement_id`),
+  KEY `monthly_leftover_allocations_project_id_budget_month_index` (`project_id`,`budget_month`),
+  CONSTRAINT `monthly_leftover_allocations_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `monthly_leftover_allocations_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `movement_tag` (
+  `movement_id` bigint unsigned NOT NULL,
+  `tag_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`movement_id`,`tag_id`),
+  KEY `movement_tag_tag_id_movement_id_index` (`tag_id`,`movement_id`),
+  CONSTRAINT `movement_tag_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `movement_tag_tag_id_foreign` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `movements` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `type` enum('expense','income','transfer','refund','investment_contribution') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint unsigned NOT NULL,
+  `occurred_on` date NOT NULL,
+  `concept` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category_id` bigint unsigned DEFAULT NULL,
+  `subcategory_id` bigint unsigned DEFAULT NULL,
+  `financial_account_id` bigint unsigned DEFAULT NULL,
+  `destination_account_id` bigint unsigned DEFAULT NULL,
+  `paid_by_user_id` bigint unsigned DEFAULT NULL,
+  `original_movement_id` bigint unsigned DEFAULT NULL,
+  `recurrence_template_id` bigint unsigned DEFAULT NULL,
+  `recurrence_occurrence_id` bigint unsigned DEFAULT NULL,
+  `generated_automatically_at` timestamp NULL DEFAULT NULL,
+  `show_in_calendar` tinyint(1) NOT NULL DEFAULT '0',
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `trashed_at` timestamp NULL DEFAULT NULL,
+  `purge_at` timestamp NULL DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `deleted_by_user_id` bigint unsigned DEFAULT NULL,
+  `restored_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `movements_recurrence_occurrence_id_unique` (`recurrence_occurrence_id`),
+  KEY `movements_category_id_foreign` (`category_id`),
+  KEY `movements_subcategory_id_foreign` (`subcategory_id`),
+  KEY `movements_financial_account_id_foreign` (`financial_account_id`),
+  KEY `movements_destination_account_id_foreign` (`destination_account_id`),
+  KEY `movements_paid_by_user_id_foreign` (`paid_by_user_id`),
+  KEY `movements_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `movements_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `movements_deleted_by_user_id_foreign` (`deleted_by_user_id`),
+  KEY `movements_restored_by_user_id_foreign` (`restored_by_user_id`),
+  KEY `movements_duplicate_lookup` (`project_id`,`category_id`,`subcategory_id`,`occurred_on`,`amount_cents`),
+  KEY `movements_recurrence_template_id_foreign` (`recurrence_template_id`),
+  KEY `movements_project_active_date` (`project_id`,`trashed_at`,`occurred_on`,`id`),
+  KEY `movements_project_active_type_date` (`project_id`,`trashed_at`,`type`,`occurred_on`,`id`),
+  KEY `movements_project_active_category_date` (`project_id`,`trashed_at`,`category_id`,`occurred_on`,`id`),
+  KEY `movements_project_active_member_date` (`project_id`,`trashed_at`,`paid_by_user_id`,`occurred_on`,`id`),
+  KEY `movements_project_active_source_date` (`project_id`,`trashed_at`,`financial_account_id`,`occurred_on`,`id`),
+  KEY `movements_project_active_destination_date` (`project_id`,`trashed_at`,`destination_account_id`,`occurred_on`,`id`),
+  KEY `movements_project_active_id` (`project_id`,`trashed_at`,`id`),
+  KEY `movements_original_active_amount` (`original_movement_id`,`trashed_at`,`amount_cents`),
+  KEY `movements_project_trash_purge` (`project_id`,`purge_at`,`trashed_at`,`id`),
+  KEY `movements_purge_due` (`purge_at`,`trashed_at`,`id`),
+  KEY `movements_calendar_lookup` (`project_id`,`show_in_calendar`,`occurred_on`,`trashed_at`),
+  CONSTRAINT `movements_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_deleted_by_user_id_foreign` FOREIGN KEY (`deleted_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_destination_account_id_foreign` FOREIGN KEY (`destination_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_financial_account_id_foreign` FOREIGN KEY (`financial_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_original_movement_id_foreign` FOREIGN KEY (`original_movement_id`) REFERENCES `movements` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_paid_by_user_id_foreign` FOREIGN KEY (`paid_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `movements_recurrence_occurrence_id_foreign` FOREIGN KEY (`recurrence_occurrence_id`) REFERENCES `recurrence_occurrences` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `movements_recurrence_template_id_foreign` FOREIGN KEY (`recurrence_template_id`) REFERENCES `recurrence_templates` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `movements_restored_by_user_id_foreign` FOREIGN KEY (`restored_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_subcategory_id_foreign` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `movements_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `password_reset_tokens` (
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `token` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `planned_movements` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `type` enum('expense','income','transfer','investment_contribution') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint unsigned NOT NULL,
+  `due_on` date NOT NULL,
+  `concept` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category_id` bigint unsigned DEFAULT NULL,
+  `subcategory_id` bigint unsigned DEFAULT NULL,
+  `financial_account_id` bigint unsigned DEFAULT NULL,
+  `destination_account_id` bigint unsigned DEFAULT NULL,
+  `paid_by_user_id` bigint unsigned DEFAULT NULL,
+  `savings_goal_id` bigint unsigned DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `status` enum('pending','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `movement_id` bigint unsigned DEFAULT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
+  `cancelled_at` timestamp NULL DEFAULT NULL,
+  `cancelled_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `planned_movements_movement_id_unique` (`movement_id`),
+  KEY `planned_movements_category_id_foreign` (`category_id`),
+  KEY `planned_movements_subcategory_id_foreign` (`subcategory_id`),
+  KEY `planned_movements_financial_account_id_foreign` (`financial_account_id`),
+  KEY `planned_movements_destination_account_id_foreign` (`destination_account_id`),
+  KEY `planned_movements_paid_by_user_id_foreign` (`paid_by_user_id`),
+  KEY `planned_movements_savings_goal_id_foreign` (`savings_goal_id`),
+  KEY `planned_movements_cancelled_by_user_id_foreign` (`cancelled_by_user_id`),
+  KEY `planned_movements_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `planned_movements_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `planned_movements_calendar_lookup` (`project_id`,`due_on`,`status`),
+  KEY `planned_movements_summary_lookup` (`project_id`,`status`,`type`),
+  CONSTRAINT `planned_movements_cancelled_by_user_id_foreign` FOREIGN KEY (`cancelled_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_destination_account_id_foreign` FOREIGN KEY (`destination_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_financial_account_id_foreign` FOREIGN KEY (`financial_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `planned_movements_paid_by_user_id_foreign` FOREIGN KEY (`paid_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `planned_movements_savings_goal_id_foreign` FOREIGN KEY (`savings_goal_id`) REFERENCES `savings_goals` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `planned_movements_subcategory_id_foreign` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `planned_movements_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `planned_movement_tag` (
+  `planned_movement_id` bigint unsigned NOT NULL,
+  `tag_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`planned_movement_id`,`tag_id`),
+  KEY `planned_movement_tag_lookup` (`tag_id`,`planned_movement_id`),
+  CONSTRAINT `planned_movement_tag_planned_movement_id_foreign` FOREIGN KEY (`planned_movement_id`) REFERENCES `planned_movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `planned_movement_tag_tag_id_foreign` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `project_members` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `user_id` bigint unsigned NOT NULL,
+  `role` enum('owner','member') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `added_by_user_id` bigint unsigned NOT NULL,
+  `joined_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `removed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_members_project_id_user_id_unique` (`project_id`,`user_id`),
+  KEY `project_members_added_by_user_id_foreign` (`added_by_user_id`),
+  KEY `project_members_user_id_removed_at_index` (`user_id`,`removed_at`),
+  KEY `project_members_project_id_role_removed_at_index` (`project_id`,`role`,`removed_at`),
+  CONSTRAINT `project_members_added_by_user_id_foreign` FOREIGN KEY (`added_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `project_members_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `project_members_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `projects` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `creator_user_id` bigint unsigned NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `color` char(7) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '#147d68',
+  `icon` varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'home',
+  `currency` char(3) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'EUR',
+  `locale` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'es',
+  `timezone` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Europe/Madrid',
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `archived_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `projects_creator_user_id_foreign` (`creator_user_id`),
+  KEY `projects_archived_by_user_id_foreign` (`archived_by_user_id`),
+  KEY `projects_archived_at_name_index` (`archived_at`,`name`),
+  CONSTRAINT `projects_archived_by_user_id_foreign` FOREIGN KEY (`archived_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `projects_creator_user_id_foreign` FOREIGN KEY (`creator_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `recurrence_occurrences` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `recurrence_template_id` bigint unsigned NOT NULL,
+  `scheduled_on` date NOT NULL,
+  `status` enum('generated','skipped') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `movement_id` bigint unsigned DEFAULT NULL,
+  `processed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `recurrence_occurrence_unique` (`recurrence_template_id`,`scheduled_on`),
+  UNIQUE KEY `recurrence_occurrences_movement_id_unique` (`movement_id`),
+  CONSTRAINT `recurrence_occurrences_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `recurrence_occurrences_recurrence_template_id_foreign` FOREIGN KEY (`recurrence_template_id`) REFERENCES `recurrence_templates` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `recurrence_recovery_notices` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `generated_count` int unsigned NOT NULL,
+  `details` json NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `dismissed_at` timestamp NULL DEFAULT NULL,
+  `dismissed_by_user_id` bigint unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `recurrence_recovery_notices_dismissed_by_user_id_foreign` (`dismissed_by_user_id`),
+  KEY `recovery_notices_lookup` (`project_id`,`dismissed_at`,`created_at`),
+  CONSTRAINT `recurrence_recovery_notices_dismissed_by_user_id_foreign` FOREIGN KEY (`dismissed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `recurrence_recovery_notices_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `recurrence_template_tag` (
+  `recurrence_template_id` bigint unsigned NOT NULL,
+  `tag_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`recurrence_template_id`,`tag_id`),
+  KEY `recurrence_template_tag_lookup` (`tag_id`,`recurrence_template_id`),
+  CONSTRAINT `recurrence_template_tag_recurrence_template_id_foreign` FOREIGN KEY (`recurrence_template_id`) REFERENCES `recurrence_templates` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `recurrence_template_tag_tag_id_foreign` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `recurrence_templates` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `type` enum('expense','income','transfer','investment_contribution') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `amount_cents` bigint unsigned NOT NULL,
+  `concept` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category_id` bigint unsigned DEFAULT NULL,
+  `subcategory_id` bigint unsigned DEFAULT NULL,
+  `financial_account_id` bigint unsigned NOT NULL,
+  `destination_account_id` bigint unsigned DEFAULT NULL,
+  `paid_by_user_id` bigint unsigned DEFAULT NULL,
+  `savings_goal_id` bigint unsigned DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `frequency` enum('daily','weekly','monthly','annual') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `start_on` date NOT NULL,
+  `anchor_day` tinyint unsigned NOT NULL,
+  `next_occurrence_on` date DEFAULT NULL,
+  `ends_on` date DEFAULT NULL,
+  `paused_at` timestamp NULL DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `recurrence_templates_category_id_foreign` (`category_id`),
+  KEY `recurrence_templates_subcategory_id_foreign` (`subcategory_id`),
+  KEY `recurrence_templates_financial_account_id_foreign` (`financial_account_id`),
+  KEY `recurrence_templates_destination_account_id_foreign` (`destination_account_id`),
+  KEY `recurrence_templates_paid_by_user_id_foreign` (`paid_by_user_id`),
+  KEY `recurrence_templates_savings_goal_id_foreign` (`savings_goal_id`),
+  KEY `recurrence_templates_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `recurrence_templates_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `recurrence_templates_due_lookup` (`project_id`,`paused_at`,`next_occurrence_on`),
+  CONSTRAINT `recurrence_templates_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_destination_account_id_foreign` FOREIGN KEY (`destination_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_financial_account_id_foreign` FOREIGN KEY (`financial_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_paid_by_user_id_foreign` FOREIGN KEY (`paid_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `recurrence_templates_savings_goal_id_foreign` FOREIGN KEY (`savings_goal_id`) REFERENCES `savings_goals` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `recurrence_templates_subcategory_id_foreign` FOREIGN KEY (`subcategory_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `recurrence_templates_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `savings_goals` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `financial_account_id` bigint unsigned NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `target_amount_cents` bigint unsigned NOT NULL,
+  `target_date` date DEFAULT NULL,
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `savings_goals_financial_account_id_foreign` (`financial_account_id`),
+  KEY `savings_goals_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `savings_goals_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `savings_goals_project_id_archived_at_index` (`project_id`,`archived_at`),
+  CONSTRAINT `savings_goals_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `savings_goals_financial_account_id_foreign` FOREIGN KEY (`financial_account_id`) REFERENCES `financial_accounts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `savings_goals_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `savings_goals_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `sessions` (
+  `id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_agent` text COLLATE utf8mb4_unicode_ci,
+  `payload` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_activity` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `sessions_user_id_index` (`user_id`),
+  KEY `sessions_last_activity_index` (`last_activity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `tags` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name_normalized` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `merged_into_tag_id` bigint unsigned DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `tags_project_id_name_normalized_unique` (`project_id`,`name_normalized`),
+  KEY `tags_merged_into_tag_id_foreign` (`merged_into_tag_id`),
+  KEY `tags_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `tags_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `tags_project_id_archived_at_name_index` (`project_id`,`archived_at`,`name`),
+  CONSTRAINT `tags_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `tags_merged_into_tag_id_foreign` FOREIGN KEY (`merged_into_tag_id`) REFERENCES `tags` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `tags_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `tags_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `users` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_normalized` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_verified_at` timestamp NULL DEFAULT NULL,
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `remember_token` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_login_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `users_email_unique` (`email`),
+  UNIQUE KEY `users_email_normalized_unique` (`email_normalized`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `migrations` (`migration`, `batch`) VALUES
+  ('0001_01_01_000000_create_users_table', 1),
+  ('0001_01_01_000001_create_cache_table', 1),
+  ('0001_01_01_000002_create_jobs_table', 1),
+  ('2026_09_15_000000_add_access_fields_to_users_table', 1),
+  ('2026_09_15_000100_create_projects_table', 1),
+  ('2026_09_15_000200_create_project_members_table', 1),
+  ('2026_09_15_000300_create_financial_accounts_table', 1),
+  ('2026_09_15_000400_create_categories_table', 1),
+  ('2026_09_15_000500_create_budget_tables', 1),
+  ('2026_09_15_000600_create_movements_and_account_entries_tables', 1),
+  ('2026_09_15_000700_create_audit_logs_table', 1),
+  ('2026_09_15_000800_create_recurrences_and_savings_goals_tables', 1),
+  ('2026_09_15_000900_create_tags_tables', 1),
+  ('2026_09_15_001000_create_monthly_leftover_allocations_table', 1),
+  ('2026_09_16_000100_add_scale_indexes_to_movements', 1),
+  ('2026_09_16_000200_improve_accessible_category_color', 1),
+  ('2026_09_23_000100_create_calendar_foundations', 1);
+
+SET FOREIGN_KEY_CHECKS = 1;

@@ -37,6 +37,20 @@ En el primer arranque, el contenedor de la aplicación también crea `web/.env`,
 genera una clave Laravel única y aplica todas las migraciones. La descarga inicial
 de dependencias puede tardar varios minutos.
 
+Como alternativa para recrear rápidamente una base completamente vacía, el
+repositorio incluye el DDL consolidado de SmartWallet 1.1.0. Debe usarse antes
+del primer arranque y nunca sobre una base que ya contenga tablas:
+
+```powershell
+.\scripts\init-database-from-ddl.ps1
+.\scripts\start.ps1
+```
+
+El inicializador arranca únicamente MySQL, se niega a continuar si encuentra una
+base utilizada, importa `web/database/ddl/smartwallet.mysql.sql` y verifica las
+17 migraciones. El DDL contiene toda la estructura, índices, claves foráneas e
+historial técnico de migraciones, pero no usuarios ni datos financieros.
+
 Después abre [http://localhost:8010/registro](http://localhost:8010/registro) y
 crea la primera cuenta familiar. La aplicación no exige verificar el correo en la
 versión local actual, pero el correo debe ser único.

@@ -78,6 +78,10 @@ El entorno normal se instala o inicia desde esta carpeta ejecutando
 Mailpit en <http://localhost:8026>. El script espera a que Laravel, Vite y MySQL
 estén preparados antes de dar el arranque por finalizado.
 
+Una instalación totalmente nueva también puede crear rápidamente la estructura
+mediante `.\scripts\init-database-from-ddl.ps1`. El DDL consolidado reproduce el
+esquema completo de 1.1.0 y se niega a ejecutarse sobre una base con tablas.
+
 La guía completa de primera instalación, persistencia, puertos y diagnóstico está
 en [Instalación local](INSTALACION_LOCAL.md). La preparación de Windows, traslado
 del código y migración opcional de datos a otra máquina están en

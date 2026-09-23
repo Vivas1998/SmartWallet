@@ -148,12 +148,21 @@ if ($LASTEXITCODE -ge 8) {
     throw "Robocopy no pudo preparar el paquete. Código: $LASTEXITCODE"
 }
 
+$ddlSource = Join-Path $packageSource 'web\database\ddl\smartwallet.mysql.sql'
+$ddlDestinationDirectory = Join-Path $packageDirectory 'web\database\ddl'
+New-Item -ItemType Directory -Path $ddlDestinationDirectory -Force | Out-Null
+Copy-Item -LiteralPath $ddlSource -Destination $ddlDestinationDirectory
+
 Compress-Archive -LiteralPath $packageDirectory -DestinationPath $packageArchive
 Write-Host "Paquete preparado: $packageArchive"
 ```
 
 Los códigos de Robocopy entre 0 y 7 indican copia correcta. Un código igual o
 superior a 8 es un error y no debe ignorarse.
+
+La DDL canónica de SmartWallet se incorpora expresamente al paquete. Los demás
+archivos SQL siguen excluidos para evitar trasladar por accidente volcados con
+datos financieros.
 
 Traslada el ZIP al nuevo equipo mediante un medio de confianza. El paquete no
 incluye la base de datos ni las claves locales.
@@ -228,6 +237,22 @@ copiará desde `web/.env.example` y generará una `APP_KEY` única.
 
 ### 4.3 Primer arranque
 
+En una instalación completamente nueva puedes crear la base mediante las
+migraciones normales o mediante el DDL consolidado. Para utilizar el DDL, hazlo
+ahora, antes del primer `start.ps1`:
+
+```powershell
+.\scripts\init-database-from-ddl.ps1
+```
+
+El comando solo acepta una base `smartwallet` sin tablas, importa el esquema
+completo de la versión 1.1.0 y comprueba que estén registradas sus 17
+migraciones. No crea usuarios, proyectos ni movimientos. Si la base contiene
+alguna tabla, se detiene sin modificarla.
+
+Si no ejecutas este inicializador, el primer arranque construirá el mismo esquema
+aplicando las migraciones Laravel una a una.
+
 Permite ejecutar scripts solo en esta ventana de PowerShell y arranca SmartWallet:
 
 ```powershell
@@ -241,7 +266,7 @@ El primer arranque puede tardar varios minutos. El script:
 2. descarga e inicia MySQL 8.4, Node 24 y Mailpit;
 3. instala Composer y npm dentro de los volúmenes de Docker;
 4. crea `web/.env` y una clave Laravel única;
-5. aplica las migraciones de la base de datos;
+5. aplica las migraciones pendientes, o reconoce el DDL ya actualizado;
 6. recupera, si existieran, movimientos recurrentes vencidos;
 7. espera a que los servicios estén preparados.
 

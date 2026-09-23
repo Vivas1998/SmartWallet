@@ -32,6 +32,8 @@ sin mezclarlas con la contabilidad real.
   presupuesto.
 - Etiquetas, auditoría y permisos admiten planificaciones puntuales manteniendo
   el aislamiento estricto entre proyectos.
+- El DDL consolidado permite recrear una base 1.1.0 vacía con sus 31 tablas,
+  índices, claves foráneas y las 17 migraciones registradas.
 
 ### Validado
 
@@ -40,6 +42,8 @@ sin mezclarlas con la contabilidad real.
   completada.
 - Migración desde 1.0 comprobada sin incorporar automáticamente movimientos
   antiguos al calendario.
+- DDL importado desde cero y comparado con el esquema Laravel: 31 tablas, 277
+  columnas, 219 entradas de índices y 84 claves foráneas idénticas.
 - Interfaz del calendario revisada desde 360 px, con teclado, foco visible,
   contraste AA y redistribución equivalente al zoom del 200 %.
 

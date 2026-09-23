@@ -38,7 +38,7 @@ genera una clave Laravel única y aplica todas las migraciones. La descarga inic
 de dependencias puede tardar varios minutos.
 
 Como alternativa para recrear rápidamente una base completamente vacía, el
-repositorio incluye el DDL consolidado de SmartWallet 1.1.0. Debe usarse antes
+repositorio incluye el DDL consolidado de SmartWallet 1.1.1. Debe usarse antes
 del primer arranque y nunca sobre una base que ya contenga tablas:
 
 ```powershell

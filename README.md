@@ -2,12 +2,22 @@
 
 **Nombre:** SmartWallet, definitivo
 **Año objetivo:** 2026; adelantado respecto a la planificación inicial de 2027
-**Versión:** 1.1.0
-**Estado:** versión 1.1 finalizada para uso local
+**Versión:** 1.1.1
+**Estado:** versión 1.1.1 finalizada para uso local
 **Fecha de cierre de 1.1:** 23 de septiembre de 2026
 **Inicio de la preparación:** 13 de septiembre de 2026
 **Fecha máxima de la versión 1.0:** 31 de diciembre de 2026
 **Presupuesto de desarrollo:** 0 €
+
+## Criterio de versionado
+
+- `x.0.0`: versiones grandes, completas y estables.
+- `x.x.0`: mejoras funcionales sobre una versión estable.
+- `x.x.x`: correcciones pequeñas, archivos auxiliares y ajustes que no añaden
+  funciones nuevas.
+
+Así, `1.0.0` identifica la primera versión completamente utilizable, `1.1.0` la
+incorporación del calendario y `1.1.1` la entrega correctiva de la DDL.
 
 ## Objetivo
 
@@ -80,7 +90,7 @@ estén preparados antes de dar el arranque por finalizado.
 
 Una instalación totalmente nueva también puede crear rápidamente la estructura
 mediante `.\scripts\init-database-from-ddl.ps1`. El DDL consolidado reproduce el
-esquema completo de 1.1.0 y se niega a ejecutarse sobre una base con tablas.
+esquema completo de 1.1.1 y se niega a ejecutarse sobre una base con tablas.
 
 La guía completa de primera instalación, persistencia, puertos y diagnóstico está
 en [Instalación local](INSTALACION_LOCAL.md). La preparación de Windows, traslado

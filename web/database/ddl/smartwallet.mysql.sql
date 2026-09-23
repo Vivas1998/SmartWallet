@@ -1,7 +1,7 @@
 -- SmartWallet: estructura limpia de base de datos
 -- Motor objetivo: MySQL 8.4 LTS
 -- Generado el 23 de septiembre de 2026 desde 17 migraciones Laravel.
--- Compatible con SmartWallet 1.1.0.
+-- Compatible con SmartWallet 1.1.1.
 -- No contiene seeders, usuarios de ejemplo ni datos de negocio.
 -- Los únicos INSERT registran el historial técnico de migraciones aplicado.
 -- Es deliberadamente no destructivo: no contiene DROP TABLE.

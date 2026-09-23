@@ -682,3 +682,14 @@ No quedan decisiones de marca pendientes para la versión 1.0.
   frente a estimado, manteniendo el destino local con Docker Compose.
 - **Motivo:** el alcance aprobado para 1.1 está implementado, documentado y
   validado sin defectos críticos conocidos.
+
+## REL-005 — Criterio de versionado y publicación de 1.1.1
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada.
+- **Decisión:** utilizar `x.0.0` para versiones grandes y estables, `x.x.0` para
+  mejoras funcionales y `x.x.x` para pequeños errores, archivos auxiliares y
+  ajustes sin funciones nuevas. Publicar la incorporación correctiva de la DDL
+  como `1.1.1`, conservando `1.1.0` como la entrega del calendario.
+- **Motivo:** diferenciar claramente una ampliación funcional de un ajuste de
+  distribución o mantenimiento perteneciente a la misma línea de versión.

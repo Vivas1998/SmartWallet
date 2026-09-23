@@ -3,6 +3,26 @@
 Este documento sigue el formato de [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto utiliza [versionado semántico](https://semver.org/lang/es/).
 
+## [1.1.1] — 2026-09-23
+
+Entrega correctiva sin funciones nuevas, destinada a completar la distribución
+reproducible de SmartWallet 1.1.
+
+### Añadido
+
+- DDL consolidado para recrear una base 1.1.1 vacía con sus 31 tablas, índices,
+  claves foráneas y las 17 migraciones registradas.
+- Inicializador seguro de PowerShell que solo importa el DDL sobre una base
+  `smartwallet` sin tablas.
+- Instrucciones para utilizar e incluir la DDL canónica al instalar o empaquetar
+  SmartWallet en otro equipo.
+
+### Validado
+
+- DDL importado desde cero y comparado con el esquema Laravel: 31 tablas, 277
+  columnas, 219 entradas de índices y 84 claves foráneas idénticas.
+- Laravel reconoce las 17 migraciones del DDL y no intenta volver a ejecutarlas.
+
 ## [1.1.0] — 2026-09-23
 
 Primera evolución funcional de SmartWallet, centrada en planificar operaciones
@@ -32,8 +52,6 @@ sin mezclarlas con la contabilidad real.
   presupuesto.
 - Etiquetas, auditoría y permisos admiten planificaciones puntuales manteniendo
   el aislamiento estricto entre proyectos.
-- El DDL consolidado permite recrear una base 1.1.0 vacía con sus 31 tablas,
-  índices, claves foráneas y las 17 migraciones registradas.
 
 ### Validado
 
@@ -42,8 +60,6 @@ sin mezclarlas con la contabilidad real.
   completada.
 - Migración desde 1.0 comprobada sin incorporar automáticamente movimientos
   antiguos al calendario.
-- DDL importado desde cero y comparado con el esquema Laravel: 31 tablas, 277
-  columnas, 219 entradas de índices y 84 claves foráneas idénticas.
 - Interfaz del calendario revisada desde 360 px, con teclado, foco visible,
   contraste AA y redistribución equivalente al zoom del 200 %.
 

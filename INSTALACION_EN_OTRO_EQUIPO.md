@@ -246,7 +246,7 @@ ahora, antes del primer `start.ps1`:
 ```
 
 El comando solo acepta una base `smartwallet` sin tablas, importa el esquema
-completo de la versión 1.1.0 y comprueba que estén registradas sus 17
+completo de la versión 1.1.1 y comprueba que estén registradas sus 17
 migraciones. No crea usuarios, proyectos ni movimientos. Si la base contiene
 alguna tabla, se detiene sin modificarla.
 

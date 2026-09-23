@@ -2,7 +2,7 @@
 
 Revisión: 19 de septiembre de 2026.
 
-Esta guía describe la instalación local de SmartWallet 1.0 en otro equipo con
+Esta guía describe la instalación local de SmartWallet 1.1 en otro equipo con
 Windows 11. Cubre dos casos distintos:
 
 1. **Instalación nueva:** código limpio, base de datos vacía y una clave nueva.

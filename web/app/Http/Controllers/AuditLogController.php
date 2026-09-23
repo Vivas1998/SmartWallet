@@ -19,8 +19,8 @@ class AuditLogController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
         ]);
-        $actions = ['created', 'generated', 'updated', 'updated_from_original', 'trashed', 'restored', 'archived', 'reactivated', 'merged', 'paused', 'resumed', 'next_skipped', 'generation_paused', 'purged', 'member_removed'];
-        $types = ['project', 'movement', 'account', 'budget', 'goal', 'recurrence', 'tag', 'member'];
+        $actions = ['created', 'generated', 'updated', 'updated_from_original', 'completed', 'cancelled', 'trashed', 'restored', 'archived', 'reactivated', 'merged', 'paused', 'resumed', 'next_skipped', 'generation_paused', 'purged', 'member_removed'];
+        $types = ['project', 'movement', 'planned_movement', 'account', 'budget', 'goal', 'recurrence', 'tag', 'member'];
 
         $logs = $project->auditLogs()->with('actor')
             ->when($request->filled('member'), fn ($query) => $query->where('actor_user_id', $request->integer('member')))

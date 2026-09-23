@@ -71,6 +71,11 @@ class RecurrenceTemplate extends Model
         return $this->hasMany(RecurrenceOccurrence::class);
     }
 
+    public function movements(): HasMany
+    {
+        return $this->hasMany(Movement::class);
+    }
+
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class)->withTimestamps();

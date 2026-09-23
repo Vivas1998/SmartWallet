@@ -3,17 +3,26 @@
 **Creado:** 13 de septiembre de 2026
 **Estado:** lista de evolución; no implica fecha de entrega
 
-## Versión 1.1 prevista
+## Versión 1.1 publicada
 
-### Calendario de pagos
+### Calendario financiero selectivo
 
-- Mostrar pagos previstos y realizados por fecha.
-- Permitir navegar por meses y abrir el movimiento o planificación relacionada.
-- Definir durante la preparación de 1.1 si el calendario incluirá recordatorios,
-  recurrencias pendientes o únicamente una vista temporal.
+- Mostrar automáticamente recurrencias y planificaciones con vencimiento.
+- Mostrar otros movimientos solo cuando tengan activada la opción
+  `Mostrar en el calendario`.
+- Mantener los eventos realizados en su fecha prevista y mostrar por separado la
+  fecha efectiva y si fueron anticipados, puntuales o tardíos.
+- Separar importes reales y previstos sin contabilizar anticipadamente las
+  planificaciones.
+- Utilizar cuadrícula mensual en escritorio y agenda cronológica en móvil.
+- Conservar avisos exclusivamente visuales; las notificaciones externas siguen
+  aplazadas.
 
-El calendario de pagos se separa de los avisos de facturas: la vista está prevista
-para 1.1, mientras que las notificaciones continúan aplazadas.
+El alcance y los criterios completos están en
+[Requisitos de SmartWallet 1.1](REQUISITOS_1_1.md).
+
+Esta mejora se publicó como `1.1.0` el 23 de septiembre de 2026. Se mantiene en
+este documento como historial; ya no forma parte de las funciones pendientes.
 
 ## Mejoras candidatas sin versión asignada
 
@@ -57,7 +66,7 @@ para 1.1, mientras que las notificaciones continúan aplazadas.
 
 - Una mejora no entra en una versión hasta definir requisitos y criterios de
   aceptación.
-- La prioridad se decidirá con la experiencia de uso de la versión 1.0.
+- La prioridad se decidirá con la experiencia de uso de la versión estable.
 - Las mejoras no deben romper el aislamiento entre proyectos ni la exactitud del
   historial financiero.
 
@@ -67,3 +76,5 @@ para 1.1, mientras que las notificaciones continúan aplazadas.
 |---|---|---|
 | 13-09-2026 | Creación de la lista, reserva del calendario de pagos para 1.1 y registro del modo oscuro y demás funciones aplazadas. | Conservar las ideas sin ampliar silenciosamente el alcance de 1.0. |
 | 13-09-2026 | Añadida la autenticación multifactor futura con TOTP preferido y SMS opcional mediante proveedor externo. | Preparar la verificación de inicios de sesión sin añadir coste ni dependencias a la versión local. |
+| 22-09-2026 | Definido el calendario selectivo de 1.1, sus fuentes, estados, permisos y relación entre vencimiento y fecha efectiva. | Evitar saturar el calendario y separar previsión de contabilidad real. |
+| 23-09-2026 | Publicada la versión 1.1.0 con calendario selectivo, planificaciones puntuales y resumen real frente a estimado. | Cerrar el alcance aprobado y comenzar su validación mediante uso real. |

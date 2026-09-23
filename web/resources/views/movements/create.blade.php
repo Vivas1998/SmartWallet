@@ -101,6 +101,7 @@
                         <textarea class="field__control field__control--textarea" id="movement-notes" name="notes" maxlength="5000">{{ old('notes') }}</textarea>
                     </div>
                     @include('movements._tags', ['selectedTagIds' => []])
+                    @include('movements._calendar-toggle', ['movement' => null])
                 </div>
             </div>
         </section>

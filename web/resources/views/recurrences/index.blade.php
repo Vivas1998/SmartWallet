@@ -22,7 +22,7 @@
     @else
         <div class="recurrence-list">
             @foreach ($templates as $recurrence)
-                <article class="recurrence-card {{ $recurrence->paused_at ? 'recurrence-card--paused' : '' }}">
+                <article class="recurrence-card {{ $recurrence->paused_at ? 'recurrence-card--paused' : '' }}" id="recurrence-{{ $recurrence->id }}">
                     <div class="recurrence-card__identity">
                         <span class="recurrence-card__mark recurrence-card__mark--{{ $recurrence->type->value }}" aria-hidden="true">{{ in_array($recurrence->type, [\App\Enums\MovementType::Transfer, \App\Enums\MovementType::InvestmentContribution], true) ? '↔' : ($recurrence->type === \App\Enums\MovementType::Income ? '↑' : '↓') }}</span>
                         <div><div class="recurrence-card__title"><h2>{{ $recurrence->concept }}</h2>@if($recurrence->paused_at)<span class="badge badge--muted">Pausada</span>@elseif($recurrence->next_occurrence_on === null)<span class="badge badge--muted">Finalizada</span>@else<span class="badge">Activa</span>@endif</div><p>{{ $recurrence->type->label() }} · {{ $recurrence->frequency->label() }} · {{ $recurrence->formattedAmount() }}</p>@if($recurrence->tags->isNotEmpty())<div class="movement-tags">@foreach($recurrence->tags as $tag)<span class="tag-chip tag-chip--small"># {{ $tag->name }}</span>@endforeach</div>@endif</div>

@@ -87,6 +87,11 @@ class ProjectPolicy
         return $this->view($user, $project) && ! $project->isArchived();
     }
 
+    public function managePlannedMovements(User $user, Project $project): bool
+    {
+        return $this->recordMovements($user, $project);
+    }
+
     private function isOwner(User $user, Project $project): bool
     {
         return $project->activeMemberships()

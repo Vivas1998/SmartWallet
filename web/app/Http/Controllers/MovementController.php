@@ -43,7 +43,7 @@ class MovementController extends Controller
         $typeValues = array_map(fn (MovementType $type): string => $type->value, MovementType::cases());
 
         $movements = $project->movements()
-            ->with(['category', 'subcategory', 'account', 'destinationAccount', 'paidBy', 'originalMovement', 'tags'])
+            ->with(['category', 'subcategory', 'account', 'destinationAccount', 'paidBy', 'originalMovement', 'plannedMovement', 'tags'])
             ->withSum(['refunds as refunded_cents' => fn ($query) => $query->whereNull('trashed_at')], 'amount_cents')
             ->whereNull('trashed_at')
             ->whereBetween('occurred_on', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
@@ -105,6 +105,7 @@ class MovementController extends Controller
                 'financial_account_id' => $account->id,
                 'paid_by_user_id' => $paidBy->id,
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'created_by_user_id' => $request->user()->id,
                 'updated_by_user_id' => $request->user()->id,
             ]);
@@ -148,6 +149,7 @@ class MovementController extends Controller
                 'financial_account_id' => $source->id,
                 'destination_account_id' => $destination->id,
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'created_by_user_id' => $request->user()->id,
                 'updated_by_user_id' => $request->user()->id,
             ]);
@@ -198,6 +200,7 @@ class MovementController extends Controller
                 'paid_by_user_id' => $movement->paid_by_user_id,
                 'original_movement_id' => $movement->id,
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'created_by_user_id' => $request->user()->id,
                 'updated_by_user_id' => $request->user()->id,
             ]);
@@ -287,6 +290,7 @@ class MovementController extends Controller
                 'financial_account_id' => $account->id,
                 'paid_by_user_id' => $paidBy->id,
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
@@ -388,6 +392,7 @@ class MovementController extends Controller
                 'financial_account_id' => $source->id,
                 'destination_account_id' => $destination->id,
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
@@ -418,6 +423,7 @@ class MovementController extends Controller
                 'occurred_on' => $occurredOn->toDateString(),
                 'concept' => trim($validated['concept']),
                 'notes' => $this->nullableTrim($validated['notes'] ?? null),
+                'show_in_calendar' => $request->boolean('show_in_calendar'),
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
@@ -441,6 +447,7 @@ class MovementController extends Controller
             'financial_account_id' => ['required', 'integer'],
             'paid_by_user_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'show_in_calendar' => ['nullable', 'boolean'],
             'allow_duplicate' => ['nullable', 'boolean'],
             'tag_ids' => ['nullable', 'array', 'max:20'],
             'tag_ids.*' => ['integer', 'distinct'],
@@ -476,6 +483,7 @@ class MovementController extends Controller
             'financial_account_id' => ['required', 'integer'],
             'destination_account_id' => ['required', 'integer', 'different:financial_account_id'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'show_in_calendar' => ['nullable', 'boolean'],
             'savings_goal_id' => ['nullable', 'integer'],
             'goal_direction' => ['nullable', Rule::enum(GoalAllocationDirection::class)],
             'tag_ids' => ['nullable', 'array', 'max:20'],
@@ -551,6 +559,7 @@ class MovementController extends Controller
             'occurred_on' => ['required', 'date'],
             'concept' => ['required', 'string', 'max:180'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'show_in_calendar' => ['nullable', 'boolean'],
             'tag_ids' => ['nullable', 'array', 'max:20'],
             'tag_ids.*' => ['integer', 'distinct'],
         ]);

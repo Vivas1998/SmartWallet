@@ -218,7 +218,7 @@ document.querySelectorAll('[data-movement-form]').forEach((form) => {
     synchronizeMovementFields();
 });
 
-document.querySelectorAll('[data-recurrence-form]').forEach((form) => {
+document.querySelectorAll('[data-recurrence-form], [data-planned-form]').forEach((form) => {
     const kind = form.querySelector('[data-recurrence-kind]');
     const category = form.querySelector('[data-recurrence-category]');
     const subcategory = form.querySelector('[data-recurrence-subcategory]');

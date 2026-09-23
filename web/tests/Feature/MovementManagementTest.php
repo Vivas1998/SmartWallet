@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Actions\Calendar\BuildMonthlyCalendar;
 use App\Enums\CategoryType;
 use App\Enums\FinancialAccountType;
 use App\Enums\ProjectRole;
 use App\Models\Category;
 use App\Models\FinancialAccount;
+use App\Models\Movement;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -64,6 +67,44 @@ class MovementManagementTest extends TestCase
         ]))->assertRedirect();
 
         $this->assertDatabaseHas('account_entries', ['financial_account_id' => $credit->id, 'signed_amount_cents' => 5000]);
+    }
+
+    public function test_manual_movements_are_hidden_by_default_and_can_be_added_to_or_removed_from_the_calendar(): void
+    {
+        [$project, $owner, $account, $category] = $this->financialProject();
+
+        $this->actingAs($owner)->get(route('movements.create', $project))
+            ->assertOk()
+            ->assertSee('Mostrar en el calendario');
+        $this->actingAs($owner)->post(route('movements.store', $project), $this->movementData($account, $category, null, [
+            'concept' => 'Movimiento oculto',
+        ]))->assertRedirect();
+        $this->actingAs($owner)->post(route('movements.store', $project), $this->movementData($account, $category, null, [
+            'amount' => '25,00',
+            'concept' => 'Movimiento visible',
+            'show_in_calendar' => '1',
+        ]))->assertRedirect();
+
+        $hidden = $project->movements()->where('concept', 'Movimiento oculto')->firstOrFail();
+        $visible = $project->movements()->where('concept', 'Movimiento visible')->firstOrFail();
+        $this->assertFalse($hidden->show_in_calendar);
+        $this->assertTrue($visible->show_in_calendar);
+
+        $events = collect(app(BuildMonthlyCalendar::class)->handle(
+            $project,
+            CarbonImmutable::parse('2026-09-01'),
+            CarbonImmutable::parse('2026-09-15'),
+        )['events']);
+        $this->assertFalse($events->contains('movement_id', $hidden->id));
+        $this->assertTrue($events->contains('movement_id', $visible->id));
+
+        $this->actingAs($owner)->patch(route('movements.update', [$project, $visible]), $this->movementData($account, $category, null, [
+            'amount' => '25,00',
+            'concept' => 'Movimiento visible',
+            'show_in_calendar' => '0',
+        ]))->assertRedirect();
+        $this->assertFalse($visible->fresh()->show_in_calendar);
+        $this->assertFalse($project->auditLogs()->latest('id')->firstOrFail()->after_values['show_in_calendar']);
     }
 
     public function test_a_possible_manual_duplicate_warns_but_can_be_saved_anyway(): void
@@ -164,6 +205,73 @@ class MovementManagementTest extends TestCase
         $this->assertDatabaseHas('account_entries', ['financial_account_id' => $investment->id, 'signed_amount_cents' => 10000]);
         $this->assertDatabaseHas('movements', ['destination_account_id' => $investment->id, 'type' => 'investment_contribution']);
         $this->assertSame(0, $project->movements()->whereIn('type', ['expense', 'income'])->count());
+    }
+
+    public function test_transfers_investments_card_payments_and_refunds_can_be_selected_for_the_calendar(): void
+    {
+        [$project, $owner, $source, $category] = $this->financialProject();
+        $savings = $this->account($project, $owner, FinancialAccountType::Savings, 'Ahorro');
+        $card = $this->account($project, $owner, FinancialAccountType::CreditCard, 'Tarjeta');
+        $investment = $this->account($project, $owner, FinancialAccountType::ExternalInvestment, 'Cartera externa');
+        $incomeCategory = $this->category($project, $owner, 'Ingresos', CategoryType::Income);
+
+        $this->actingAs($owner)->get(route('movements.transfer.create', $project))
+            ->assertOk()
+            ->assertSee('Mostrar en el calendario');
+        foreach ([
+            [$savings, 'Transferencia visible'],
+            [$card, 'Pago de tarjeta visible'],
+            [$investment, 'Inversión visible'],
+        ] as [$destination, $concept]) {
+            $this->actingAs($owner)->post(route('movements.transfer.store', $project), [
+                'amount' => '10,00',
+                'occurred_on' => '2026-09-15',
+                'concept' => $concept,
+                'financial_account_id' => $source->id,
+                'destination_account_id' => $destination->id,
+                'show_in_calendar' => '1',
+            ])->assertRedirect();
+        }
+        $this->actingAs($owner)->post(route('movements.store', $project), $this->movementData($source, $incomeCategory, null, [
+            'type' => 'income',
+            'amount' => '100,00',
+            'concept' => 'Ingreso visible',
+            'show_in_calendar' => '1',
+        ]))->assertRedirect();
+
+        $this->actingAs($owner)->post(route('movements.store', $project), $this->movementData($source, $category, null, [
+            'amount' => '40,00',
+            'concept' => 'Gasto con devolución',
+        ]))->assertRedirect();
+        $expense = $project->movements()->where('concept', 'Gasto con devolución')->firstOrFail();
+        $this->actingAs($owner)->get(route('movements.refund.create', [$project, $expense]))
+            ->assertOk()
+            ->assertSee('Mostrar en el calendario');
+        $this->actingAs($owner)->post(route('movements.refund.store', [$project, $expense]), [
+            'amount' => '10,00',
+            'occurred_on' => '2026-09-15',
+            'concept' => 'Devolución visible',
+            'show_in_calendar' => '1',
+        ])->assertRedirect();
+
+        $selected = $project->movements()->whereIn('concept', [
+            'Transferencia visible',
+            'Pago de tarjeta visible',
+            'Inversión visible',
+            'Ingreso visible',
+            'Devolución visible',
+        ])->get();
+        $this->assertCount(5, $selected);
+        $this->assertTrue($selected->every(fn (Movement $movement): bool => $movement->show_in_calendar));
+
+        $refund = $selected->firstWhere('concept', 'Devolución visible');
+        $this->actingAs($owner)->patch(route('movements.update', [$project, $refund]), [
+            'amount' => '10,00',
+            'occurred_on' => '2026-09-15',
+            'concept' => 'Devolución visible',
+            'show_in_calendar' => '0',
+        ])->assertRedirect();
+        $this->assertFalse($refund->fresh()->show_in_calendar);
     }
 
     public function test_partial_refunds_restore_the_account_and_cannot_exceed_the_original_expense(): void

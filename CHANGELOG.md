@@ -3,6 +3,46 @@
 Este documento sigue el formato de [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto utiliza [versionado semántico](https://semver.org/lang/es/).
 
+## [1.1.0] — 2026-09-23
+
+Primera evolución funcional de SmartWallet, centrada en planificar operaciones
+sin mezclarlas con la contabilidad real.
+
+### Añadido
+
+- Calendario financiero selectivo por proyecto con cuadrícula mensual en
+  escritorio y agenda cronológica en móvil.
+- Planificaciones puntuales de gastos, ingresos, transferencias y aportaciones,
+  con vencimiento, cancelación y conversión controlada en movimientos reales.
+- Proyección de apariciones recurrentes futuras sin crearlas ni contabilizarlas
+  antes de su fecha.
+- Opción `Mostrar en el calendario` para movimientos manuales, desactivada por
+  defecto y disponible para todos sus tipos.
+- Estados previsto, hoy, vencido, realizado, cancelado y omitido, además de
+  puntualidad anticipada, puntual o tardía.
+- Filtros de calendario por estado, tipo, cuenta, categoría y miembro.
+- Resumen mensual separado entre datos reales y estimados, con gastos e ingresos
+  pendientes y presupuesto disponible previsto.
+
+### Cambiado
+
+- El cálculo de fechas recurrentes se centraliza en un único servicio compartido
+  por el generador automático y el calendario.
+- La navegación del proyecto incorpora `Calendario` entre movimientos y
+  presupuesto.
+- Etiquetas, auditoría y permisos admiten planificaciones puntuales manteniendo
+  el aislamiento estricto entre proyectos.
+
+### Validado
+
+- 111 pruebas automáticas y 860 aserciones superadas en `smartwallet_test`.
+- 136 archivos PHP aceptados por Laravel Pint y compilación Vite de producción
+  completada.
+- Migración desde 1.0 comprobada sin incorporar automáticamente movimientos
+  antiguos al calendario.
+- Interfaz del calendario revisada desde 360 px, con teclado, foco visible,
+  contraste AA y redistribución equivalente al zoom del 200 %.
+
 ## [1.0.0] — 2026-09-19
 
 Primera versión completa para uso local. El alcance funcional acordado, el ensayo

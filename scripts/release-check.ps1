@@ -109,7 +109,7 @@ try {
 
     Write-Host ''
     Write-Host "Comprobación automática de $version superada." -ForegroundColor Green
-    Write-Host 'Queda la comprobación humana con zoom nativo al 200 % descrita en LIBERACION_1_0.md.'
+    Write-Host 'Queda la comprobación humana con zoom nativo al 200 % descrita en el documento de liberación de la versión actual.'
 }
 finally {
     Pop-Location

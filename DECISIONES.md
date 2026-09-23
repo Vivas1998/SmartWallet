@@ -652,3 +652,33 @@ No quedan decisiones de marca pendientes para la versión 1.0.
   claves, bases de datos, registros, dependencias y datos financieros.
 - **Motivo:** permitir instalaciones y actualizaciones trazables en otros equipos
   sin distribuir información local o sensible.
+
+## CAL-001 — Calendario financiero selectivo para 1.1
+
+- **Fecha:** 22 de septiembre de 2026.
+- **Estado:** aceptada e implementada en `1.1.0`.
+- **Decisión:** el calendario mostrará todas las recurrencias y planificaciones
+  con vencimiento, pero solo incluirá los demás movimientos cuando tengan
+  activada la opción `Mostrar en el calendario`. Las planificaciones no afectarán
+  a la contabilidad hasta convertirse en movimientos reales y nunca se
+  duplicarán ambos registros en la vista.
+- **Decisión complementaria:** un evento realizado conservará su fecha de
+  vencimiento y mostrará la fecha efectiva junto con su condición de anticipado,
+  puntual o tardío.
+- **Decisión complementaria:** el disponible real utilizará todo el gasto neto
+  contabilizado del mes, aunque parte de sus movimientos no se muestre en el
+  calendario. El disponible estimado restará además los gastos pendientes del
+  calendario; los ingresos previstos se mostrarán aparte y no ampliarán el
+  presupuesto. Los filtros afectarán a la agenda, no a este resumen global.
+- **Motivo:** mantener un calendario útil y legible, preservar la diferencia entre
+  previsión y realidad y permitir analizar el cumplimiento de vencimientos.
+
+## REL-004 — Publicación local de 1.1.0
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada.
+- **Decisión:** publicar como `1.1.0` el calendario financiero selectivo, las
+  planificaciones puntuales, su integración con recurrencias y el resumen real
+  frente a estimado, manteniendo el destino local con Docker Compose.
+- **Motivo:** el alcance aprobado para 1.1 está implementado, documentado y
+  validado sin defectos críticos conocidos.

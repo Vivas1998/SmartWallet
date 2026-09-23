@@ -39,7 +39,7 @@ de dependencias puede tardar varios minutos.
 
 Después abre [http://localhost:8010/registro](http://localhost:8010/registro) y
 crea la primera cuenta familiar. La aplicación no exige verificar el correo en la
-versión 1.0, pero el correo debe ser único.
+versión local actual, pero el correo debe ser único.
 
 ## Servicios y puertos
 
@@ -132,7 +132,7 @@ El script comprueba que el identificador de versión sea coherente, valida Docke
 Compose, arranca el entorno, revisa las migraciones y el formato PHP, compila los
 recursos, ejecuta toda la suite en `smartwallet_test` y confirma que la pantalla de
 acceso responda. No sustituye la revisión humana con zoom nativo al 200 % indicada
-en [Liberación local de SmartWallet 1.0](LIBERACION_1_0.md).
+en [Liberación local de SmartWallet 1.1](LIBERACION_1_1.md).
 
 ## Correo local
 
@@ -159,7 +159,7 @@ Problemas habituales:
 
 ## Conservación y eliminación de datos
 
-La versión 1.0 local no realiza copias de seguridad automáticas. Mientras no se
+La versión 1.1 local no realiza copias de seguridad automáticas. Mientras no se
 elimine el volumen `smartwallet_mysql_data`, detener, reconstruir o sustituir un
 contenedor conserva los datos.
 

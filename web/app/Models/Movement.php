@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'project_id', 'type', 'amount_cents', 'occurred_on', 'concept', 'category_id', 'subcategory_id',
     'financial_account_id', 'destination_account_id', 'paid_by_user_id', 'original_movement_id', 'notes',
     'recurrence_template_id', 'recurrence_occurrence_id', 'generated_automatically_at',
+    'show_in_calendar',
     'trashed_at', 'purge_at', 'created_by_user_id', 'updated_by_user_id', 'deleted_by_user_id', 'restored_by_user_id',
 ])]
 class Movement extends Model
@@ -28,6 +29,7 @@ class Movement extends Model
             'trashed_at' => 'datetime',
             'purge_at' => 'datetime',
             'generated_automatically_at' => 'datetime',
+            'show_in_calendar' => 'boolean',
         ];
     }
 
@@ -86,6 +88,11 @@ class Movement extends Model
         return $this->hasOne(MonthlyLeftoverAllocation::class);
     }
 
+    public function plannedMovement(): HasOne
+    {
+        return $this->hasOne(PlannedMovement::class);
+    }
+
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class)->withTimestamps();
@@ -133,6 +140,7 @@ class Movement extends Model
             'recurrence_template_id' => $this->recurrence_template_id,
             'recurrence_occurrence_id' => $this->recurrence_occurrence_id,
             'generated_automatically_at' => $this->generated_automatically_at?->toIso8601String(),
+            'show_in_calendar' => $this->show_in_calendar,
             'savings_goal_id' => $this->goalAllocation?->savings_goal_id,
             'goal_direction' => $this->goalAllocation?->direction->value,
             'leftover_budget_month' => $this->leftoverAllocation?->budget_month->toDateString(),

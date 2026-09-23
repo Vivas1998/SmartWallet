@@ -43,7 +43,7 @@
                         <div class="tag-card__summary">
                             <span class="tag-chip"># {{ $tag->name }}</span>
                             @if ($tag->archived_at)<span class="badge badge--muted">{{ $tag->mergedInto ? 'Fusionada' : 'Archivada' }}</span>@endif
-                            <p>{{ $tag->movements_count }} {{ $tag->movements_count === 1 ? 'movimiento' : 'movimientos' }} · {{ $tag->recurrence_templates_count }} {{ $tag->recurrence_templates_count === 1 ? 'serie' : 'series' }}</p>
+                            <p>{{ $tag->movements_count }} {{ $tag->movements_count === 1 ? 'movimiento' : 'movimientos' }} · {{ $tag->planned_movements_count }} {{ $tag->planned_movements_count === 1 ? 'planificación' : 'planificaciones' }} · {{ $tag->recurrence_templates_count }} {{ $tag->recurrence_templates_count === 1 ? 'serie' : 'series' }}</p>
                             @if ($tag->mergedInto)<small>Ahora se agrupa dentro de # {{ $tag->mergedInto->name }}.</small>@endif
                         </div>
                         @if ($canManage)
@@ -55,7 +55,7 @@
                                 @else
                                     <form class="tag-card__rename" action="{{ route('tags.update', [$project, $tag]) }}" method="post">@csrf @method('patch')<label class="sr-only" for="tag-name-{{ $tag->id }}">Nuevo nombre de {{ $tag->name }}</label><input class="field__control" id="tag-name-{{ $tag->id }}" name="name" value="{{ $tag->name }}" maxlength="60" required><button class="button button--secondary button--small" type="submit">Renombrar</button></form>
                                     @if ($activeTags->count() > 1)
-                                        <form class="tag-card__merge" action="{{ route('tags.merge', [$project, $tag]) }}" method="post" onsubmit="return confirm('¿Fusionar esta etiqueta? Todos sus movimientos y series pasarán a la etiqueta elegida.')">@csrf<label class="sr-only" for="tag-target-{{ $tag->id }}">Fusionar {{ $tag->name }} con</label><select class="field__control" id="tag-target-{{ $tag->id }}" name="target_tag_id" required><option value="">Fusionar con…</option>@foreach ($activeTags->where('id', '!=', $tag->id) as $target)<option value="{{ $target->id }}"># {{ $target->name }}</option>@endforeach</select><button class="button button--secondary button--small" type="submit">Fusionar</button></form>
+                                        <form class="tag-card__merge" action="{{ route('tags.merge', [$project, $tag]) }}" method="post" onsubmit="return confirm('¿Fusionar esta etiqueta? Todos sus movimientos, planificaciones y series pasarán a la etiqueta elegida.')">@csrf<label class="sr-only" for="tag-target-{{ $tag->id }}">Fusionar {{ $tag->name }} con</label><select class="field__control" id="tag-target-{{ $tag->id }}" name="target_tag_id" required><option value="">Fusionar con…</option>@foreach ($activeTags->where('id', '!=', $tag->id) as $target)<option value="{{ $target->id }}"># {{ $target->name }}</option>@endforeach</select><button class="button button--secondary button--small" type="submit">Fusionar</button></form>
                                     @endif
                                     <form action="{{ route('tags.archive', [$project, $tag]) }}" method="post" onsubmit="return confirm('¿Archivar esta etiqueta? Se conservará en los movimientos existentes.')">@csrf<button class="button button--danger-quiet button--small" type="submit">Archivar</button></form>
                                 @endif

@@ -44,6 +44,11 @@ class Tag extends Model
         return $this->belongsToMany(RecurrenceTemplate::class)->withTimestamps();
     }
 
+    public function plannedMovements(): BelongsToMany
+    {
+        return $this->belongsToMany(PlannedMovement::class)->withTimestamps();
+    }
+
     public function mergedInto(): BelongsTo
     {
         return $this->belongsTo(self::class, 'merged_into_tag_id');

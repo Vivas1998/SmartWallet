@@ -27,6 +27,7 @@
             <div class="field"><label class="field__label" for="movement-payer">Pagado o recibido por</label><select class="field__control" id="movement-payer" name="paid_by_user_id">@foreach ($members as $member)<option value="{{ $member->id }}" @selected((string) old('paid_by_user_id', $movement->paid_by_user_id) === (string) $member->id)>{{ $member->name }}</option>@endforeach</select></div>
             <div class="field field--wide"><label class="field__label" for="movement-notes">Notas <span class="field__optional">opcional</span></label><textarea class="field__control field__control--textarea" id="movement-notes" name="notes" maxlength="5000">{{ old('notes', $movement->notes) }}</textarea></div>
             @include('movements._tags', ['selectedTagIds' => $movement->tags->modelKeys()])
+            @include('movements._calendar-toggle', ['movement' => $movement])
         </div></div></section>
         <div class="wizard__actions"><a class="button button--secondary" href="{{ route('movements.index', $project) }}">Cancelar</a><button class="button button--primary" type="submit">{{ $possibleDuplicate ? 'Guardar igualmente' : 'Guardar cambios' }}</button></div>
     </form>

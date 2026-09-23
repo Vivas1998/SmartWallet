@@ -80,6 +80,11 @@ class Project extends Model
         return $this->hasMany(Movement::class);
     }
 
+    public function plannedMovements(): HasMany
+    {
+        return $this->hasMany(PlannedMovement::class);
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);

@@ -134,7 +134,7 @@
                     @endif
                 @else
                     <p>Archivar conserva movimientos, cuentas, presupuestos e informes, pero bloquea cualquier cambio para todos sus miembros.</p>
-                    <p class="settings-card__note">La generación de movimientos recurrentes quedará suspendida mientras esté archivado. SmartWallet no permite eliminar proyectos definitivamente en la versión 1.0.</p>
+                    <p class="settings-card__note">La generación de movimientos recurrentes quedará suspendida mientras esté archivado. SmartWallet no permite eliminar proyectos definitivamente en la versión actual.</p>
                     @if ($canArchive)
                         <form action="{{ route('projects.archive', $project) }}" method="post" data-confirm="¿Archivar este proyecto? Quedará en modo de solo lectura para todos los miembros.">
                             @csrf

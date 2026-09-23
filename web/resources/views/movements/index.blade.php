@@ -11,7 +11,7 @@
             <h1 class="page-heading__title">Movimientos</h1>
             <p class="page-heading__intro">Consulta gastos, ingresos, transferencias y devoluciones sin mezclar proyectos.</p>
         </div>
-        <div class="button-group">@can('recordMovements', $project)<a class="button button--secondary" href="{{ route('movements.transfer.create', $project) }}">↔ Transferir</a><a class="button button--primary" href="{{ route('movements.create', $project) }}">+ Añadir gasto o ingreso</a>@endcan<a class="button button--quiet" href="{{ route('movements.trash', $project) }}">Papelera</a></div>
+        <div class="button-group"><a class="button button--quiet" href="{{ route('planned-movements.index', $project) }}">Planificaciones</a>@can('recordMovements', $project)<a class="button button--secondary" href="{{ route('movements.transfer.create', $project) }}">↔ Transferir</a><a class="button button--primary" href="{{ route('movements.create', $project) }}">+ Añadir gasto o ingreso</a>@endcan<a class="button button--quiet" href="{{ route('movements.trash', $project) }}">Papelera</a></div>
     </header>
 
     @include('projects._navigation', ['project' => $project])
@@ -58,9 +58,9 @@
                 <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th>Miembro</th><th class="movement-table__amount">Importe</th><th>Acciones</th></tr></thead>
                 <tbody>
                     @foreach ($movements as $movement)
-                        <tr>
+                        <tr id="movement-{{ $movement->id }}">
                             <td data-label="Fecha">{{ $movement->occurred_on->format('d/m/Y') }}</td>
-                            <td data-label="Concepto"><strong>{{ $movement->concept }}</strong><span class="movement-type movement-type--{{ $movement->type->value }}">{{ $movement->type->label() }}</span>@if($movement->tags->isNotEmpty())<span class="movement-tags">@foreach($movement->tags as $tag)<span class="tag-chip tag-chip--small"># {{ $tag->name }}</span>@endforeach</span>@endif @if($movement->generated_automatically_at)<small>Generado automáticamente · puedes editar solo esta aparición</small>@endif</td>
+                            <td data-label="Concepto"><strong>{{ $movement->concept }}</strong><span class="movement-type movement-type--{{ $movement->type->value }}">{{ $movement->type->label() }}</span>@if($movement->tags->isNotEmpty())<span class="movement-tags">@foreach($movement->tags as $tag)<span class="tag-chip tag-chip--small"># {{ $tag->name }}</span>@endforeach</span>@endif @if($movement->generated_automatically_at)<small>Generado automáticamente · visible en el calendario</small>@elseif($movement->plannedMovement)<small>Realizado desde una planificación · visible en el calendario</small>@elseif($movement->show_in_calendar)<small>Seleccionado para el calendario</small>@endif</td>
                             <td data-label="Categoría">{{ $movement->category?->name ?? '—' }}@if ($movement->subcategory)<small>{{ $movement->subcategory->name }}</small>@elseif ($movement->originalMovement)<small>Vinculada a {{ $movement->originalMovement->concept }}</small>@endif</td>
                             <td data-label="Cuenta">{{ $movement->account?->name }}@if ($movement->destinationAccount)<small>→ {{ $movement->destinationAccount->name }}</small>@endif</td>
                             <td data-label="Miembro">{{ $movement->paidBy?->name ?? '—' }}</td>

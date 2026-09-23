@@ -21,6 +21,7 @@
             <div class="field field--wide"><label class="field__label" for="refund-concept">Concepto</label><input class="field__control" id="refund-concept" name="concept" value="{{ old('concept', $movement?->concept ?? 'Devolución de '.$original->concept) }}" maxlength="180" required></div>
             <div class="field field--wide"><label class="field__label" for="refund-notes">Notas <span class="field__optional">opcional</span></label><textarea class="field__control field__control--textarea" id="refund-notes" name="notes" maxlength="5000">{{ old('notes', $movement?->notes) }}</textarea></div>
             @include('movements._tags', ['selectedTagIds' => $movement?->tags?->modelKeys() ?? $original->tags->whereNull('archived_at')->modelKeys()])
+            @include('movements._calendar-toggle', ['movement' => $movement])
         </div></div></section>
         <div class="wizard__actions"><a class="button button--secondary" href="{{ route('movements.index', $project) }}">Cancelar</a><button class="button button--primary" type="submit">{{ $editing ? 'Guardar cambios' : 'Registrar devolución' }}</button></div>
     </form>

@@ -30,6 +30,7 @@
                 <div class="field field--wide"><label class="field__label" for="transfer-concept">Concepto</label><input class="field__control" id="transfer-concept" name="concept" value="{{ old('concept', $movement?->concept) }}" maxlength="180" placeholder="Ej. Aportación mensual a ahorro" required></div>
                 <div class="field field--wide"><label class="field__label" for="transfer-notes">Notas <span class="field__optional">opcional</span></label><textarea class="field__control field__control--textarea" id="transfer-notes" name="notes" maxlength="5000">{{ old('notes', $movement?->notes) }}</textarea></div>
                 @include('movements._tags', ['selectedTagIds' => $movement?->tags?->modelKeys() ?? []])
+                @include('movements._calendar-toggle', ['movement' => $movement])
             </div>
         </div></section>
         <div class="wizard__actions"><a class="button button--secondary" href="{{ $leftoverMonth ? route('budgets.closure', ['project' => $project, 'month' => $leftoverMonth->format('Y-m')]) : ($goal ? route('savings-goals.index', $project) : route('movements.index', $project)) }}">Cancelar</a><button class="button button--primary" type="submit">{{ $editing ? 'Guardar cambios' : ($isGoalWithdrawal ? 'Registrar retirada' : ($isGoalContribution ? 'Registrar aportación' : 'Registrar transferencia')) }}</button></div>

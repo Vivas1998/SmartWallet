@@ -22,7 +22,7 @@ class TagController extends Controller
 
         return view('tags.index', [
             'project' => $project,
-            'tags' => $project->tags()->with('mergedInto')->withCount(['movements', 'recurrenceTemplates'])
+            'tags' => $project->tags()->with('mergedInto')->withCount(['movements', 'plannedMovements', 'recurrenceTemplates'])
                 ->orderByRaw('archived_at is not null')->orderBy('name')->get(),
             'activeTags' => $project->tags()->whereNull('archived_at')->orderBy('name')->get(),
             'canCreate' => $request->user()->can('createTags', $project),
@@ -109,6 +109,7 @@ class TagController extends Controller
         DB::transaction(function () use ($request, $project, $tag, $target, $audit): void {
             $before = $tag->auditSnapshot();
             $this->movePivotRelations('movement_tag', 'movement_id', $tag->id, $target->id);
+            $this->movePivotRelations('planned_movement_tag', 'planned_movement_id', $tag->id, $target->id);
             $this->movePivotRelations('recurrence_template_tag', 'recurrence_template_id', $tag->id, $target->id);
             $tag->update([
                 'archived_at' => now(),

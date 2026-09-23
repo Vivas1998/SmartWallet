@@ -1,15 +1,15 @@
-# Seguridad y privacidad de SmartWallet 1.0
+# Seguridad y privacidad de SmartWallet 1.1
 
-Última revisión: 17 de septiembre de 2026.
+Última revisión: 23 de septiembre de 2026.
 
 ## Resultado
 
-La candidata 1.0 no presenta defectos críticos conocidos dentro de su alcance
+La versión 1.1 no presenta defectos críticos conocidos dentro de su alcance
 local. La revisión incluyó código, configuración, rutas, permisos, sesiones,
 dependencias y recorridos reales contra la base aislada `smartwallet_test`.
 
 Composer y npm no comunicaron vulnerabilidades conocidas en las versiones
-bloqueadas. La suite completa superó 95 pruebas y 664 aserciones.
+bloqueadas. La suite completa superó 111 pruebas y 860 aserciones.
 
 ## Modelo de riesgo aprobado
 
@@ -51,8 +51,9 @@ total de los datos.
 - Todas las rutas financieras exigen autenticación.
 - Una Policy central valida la pertenencia activa y distingue propietario y
   miembro.
-- Cada controlador comprueba que movimientos, cuentas, categorías, miembros,
-  objetivos, recurrencias, etiquetas y avisos pertenecen al proyecto de la URL.
+- Cada controlador comprueba que movimientos, planificaciones, cuentas,
+  categorías, miembros, objetivos, recurrencias, etiquetas y avisos pertenecen
+  al proyecto de la URL.
 - Las consultas de paneles, informes, auditoría y exportaciones parten siempre
   del proyecto autorizado.
 - El propietario creador no puede ser degradado ni retirado.
@@ -123,4 +124,4 @@ directamente a Internet. El despliegue futuro deberá completar, como mínimo:
 8. exigir MFA antes de cualquier exposición de datos financieros a Internet.
 
 Estas condiciones pertenecen al futuro hito de homelab y no bloquean la versión
-1.0 limitada al PC local.
+1.1 limitada al PC local.

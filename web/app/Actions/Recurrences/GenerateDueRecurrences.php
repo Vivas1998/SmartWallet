@@ -8,12 +8,12 @@ use App\Actions\Audit\RecordProjectAudit;
 use App\Actions\Movements\RebuildMovementEntries;
 use App\Actions\SavingsGoals\SyncGoalAllocation;
 use App\Enums\GoalAllocationDirection;
-use App\Enums\RecurrenceFrequency;
 use App\Enums\RecurrenceOccurrenceStatus;
 use App\Models\Movement;
 use App\Models\RecurrenceOccurrence;
 use App\Models\RecurrenceRecoveryNotice;
 use App\Models\RecurrenceTemplate;
+use App\Services\Recurrences\RecurrenceSchedule;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +23,7 @@ final class GenerateDueRecurrences
         private readonly RebuildMovementEntries $entries,
         private readonly SyncGoalAllocation $goalAllocation,
         private readonly RecordProjectAudit $audit,
+        private readonly RecurrenceSchedule $schedule,
     ) {}
 
     /** @return array{generated:int, projects:array<int, list<array{concept:string,date:string,amount_cents:int}>>} */
@@ -78,7 +79,7 @@ final class GenerateDueRecurrences
                         ];
                     }
 
-                    $next = $this->nextDate($template, $scheduledOn);
+                    $next = $this->schedule->nextDate($template, $scheduledOn);
                     $template->update([
                         'next_occurrence_on' => $template->ends_on !== null && $next->toDateString() > $template->ends_on->toDateString() ? null : $next->toDateString(),
                     ]);
@@ -98,19 +99,6 @@ final class GenerateDueRecurrences
         }
 
         return $result;
-    }
-
-    public function nextDate(RecurrenceTemplate $template, CarbonImmutable $current): CarbonImmutable
-    {
-        return match ($template->frequency) {
-            RecurrenceFrequency::Daily => $current->addDay(),
-            RecurrenceFrequency::Weekly => $current->addWeek(),
-            RecurrenceFrequency::Monthly => $this->dateWithAnchor($current->startOfMonth()->addMonth(), (int) $template->anchor_day),
-            RecurrenceFrequency::Annual => $this->dateWithAnchor(
-                CarbonImmutable::create($current->year + 1, $template->start_on->month, 1, 0, 0, 0, 'Europe/Madrid'),
-                (int) $template->anchor_day,
-            ),
-        };
     }
 
     private function createMovement(RecurrenceTemplate $template, RecurrenceOccurrence $occurrence, CarbonImmutable $scheduledOn): Movement
@@ -165,10 +153,5 @@ final class GenerateDueRecurrences
         }
 
         return true;
-    }
-
-    private function dateWithAnchor(CarbonImmutable $month, int $anchorDay): CarbonImmutable
-    {
-        return $month->day(min($anchorDay, $month->daysInMonth));
     }
 }

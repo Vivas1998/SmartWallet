@@ -22,7 +22,7 @@
                     <div><dt>Cuenta creada</dt><dd>{{ $user->created_at->timezone('Europe/Madrid')->format('d/m/Y') }}</dd></div>
                     <div><dt>Último acceso</dt><dd>{{ $user->last_login_at?->timezone('Europe/Madrid')->format('d/m/Y H:i') ?? 'No disponible' }}</dd></div>
                 </dl>
-                <p class="profile-summary__note">La versión 1.0 utiliza tus iniciales y no almacena fotografías de perfil.</p>
+                <p class="profile-summary__note">La versión actual utiliza tus iniciales y no almacena fotografías de perfil.</p>
             </section>
         </aside>
 
@@ -119,7 +119,7 @@
 
             <section class="profile-card profile-card--muted" aria-labelledby="profile-account-title">
                 <div class="profile-card__heading"><div><p class="eyebrow">Conservación</p><h2 id="profile-account-title">Cuenta de usuario</h2></div></div>
-                <p class="profile-card__intro">SmartWallet no permite eliminar cuentas definitivamente en la versión 1.0. Así se conserva la autoría histórica de movimientos y cambios.</p>
+                <p class="profile-card__intro">SmartWallet no permite eliminar cuentas definitivamente en la versión actual. Así se conserva la autoría histórica de movimientos y cambios.</p>
             </section>
         </div>
     </div>

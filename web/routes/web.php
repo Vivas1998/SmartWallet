@@ -8,11 +8,13 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\FinancialAccountController;
 use App\Http\Controllers\MonthlyClosureController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\MovementExportController;
+use App\Http\Controllers\PlannedMovementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
@@ -133,6 +135,24 @@ Route::middleware('auth')->group(function (): void {
         ->name('movements.trash.export');
     Route::post('/proyectos/{project}/papelera/{movement}/restaurar', [MovementController::class, 'restore'])
         ->name('movements.restore');
+    Route::get('/proyectos/{project}/calendario', [CalendarController::class, 'index'])
+        ->name('calendar.index');
+    Route::get('/proyectos/{project}/planificaciones', [PlannedMovementController::class, 'index'])
+        ->name('planned-movements.index');
+    Route::get('/proyectos/{project}/planificaciones/nueva', [PlannedMovementController::class, 'create'])
+        ->name('planned-movements.create');
+    Route::post('/proyectos/{project}/planificaciones', [PlannedMovementController::class, 'store'])
+        ->name('planned-movements.store');
+    Route::get('/proyectos/{project}/planificaciones/{plannedMovement}/editar', [PlannedMovementController::class, 'edit'])
+        ->name('planned-movements.edit');
+    Route::put('/proyectos/{project}/planificaciones/{plannedMovement}', [PlannedMovementController::class, 'update'])
+        ->name('planned-movements.update');
+    Route::post('/proyectos/{project}/planificaciones/{plannedMovement}/cancelar', [PlannedMovementController::class, 'cancel'])
+        ->name('planned-movements.cancel');
+    Route::get('/proyectos/{project}/planificaciones/{plannedMovement}/realizar', [PlannedMovementController::class, 'complete'])
+        ->name('planned-movements.complete');
+    Route::post('/proyectos/{project}/planificaciones/{plannedMovement}/realizar', [PlannedMovementController::class, 'storeCompletion'])
+        ->name('planned-movements.complete.store');
     Route::get('/proyectos/{project}/recurrentes', [RecurrenceController::class, 'index'])
         ->name('recurrences.index');
     Route::get('/proyectos/{project}/recurrentes/nuevo', [RecurrenceController::class, 'create'])

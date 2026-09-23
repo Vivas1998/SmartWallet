@@ -27,10 +27,15 @@
         @if(request()->routeIs('projects.show')) aria-current="page" @endif
     >Resumen</a>
     <a
-        class="project-nav__link {{ request()->routeIs('movements.*') ? 'project-nav__link--active' : '' }}"
+        class="project-nav__link {{ request()->routeIs('movements.*') || request()->routeIs('planned-movements.*') ? 'project-nav__link--active' : '' }}"
         href="{{ route('movements.index', $project) }}"
-        @if(request()->routeIs('movements.*')) aria-current="page" @endif
+        @if(request()->routeIs('movements.*') || request()->routeIs('planned-movements.*')) aria-current="page" @endif
     >Movimientos</a>
+    <a
+        class="project-nav__link {{ request()->routeIs('calendar.*') ? 'project-nav__link--active' : '' }}"
+        href="{{ route('calendar.index', $project) }}"
+        @if(request()->routeIs('calendar.*')) aria-current="page" @endif
+    >Calendario</a>
     <a
         class="project-nav__link {{ request()->routeIs('budgets.*') ? 'project-nav__link--active' : '' }}"
         href="{{ route('budgets.index', $project) }}"

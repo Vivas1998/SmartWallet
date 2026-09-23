@@ -15,6 +15,7 @@ use App\Models\FinancialAccount;
 use App\Models\Project;
 use App\Models\RecurrenceOccurrence;
 use App\Models\RecurrenceTemplate;
+use App\Services\Recurrences\RecurrenceSchedule;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -114,7 +115,7 @@ class RecurrenceController extends Controller
         return back()->with('status', 'Serie pausada. No se crearán movimientos mientras permanezca así.');
     }
 
-    public function resume(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, GenerateDueRecurrences $generate): RedirectResponse
+    public function resume(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, GenerateDueRecurrences $generate, RecurrenceSchedule $schedule): RedirectResponse
     {
         $this->authorize('manageRecurrences', $project);
         $this->ensureTemplate($project, $recurrence);
@@ -124,7 +125,7 @@ class RecurrenceController extends Controller
 
         $today = CarbonImmutable::now('Europe/Madrid')->startOfDay();
         $omitted = 0;
-        DB::transaction(function () use ($request, $project, $recurrence, $audit, $generate, $today, &$omitted): void {
+        DB::transaction(function () use ($request, $project, $recurrence, $audit, $schedule, $today, &$omitted): void {
             $template = RecurrenceTemplate::query()->lockForUpdate()->findOrFail($recurrence->id);
             $before = $template->auditSnapshot();
             while ($template->next_occurrence_on !== null && $template->next_occurrence_on->toDateString() < $today->toDateString()) {
@@ -132,7 +133,7 @@ class RecurrenceController extends Controller
                     ['recurrence_template_id' => $template->id, 'scheduled_on' => $template->next_occurrence_on->toDateString()],
                     ['status' => RecurrenceOccurrenceStatus::Skipped, 'processed_at' => now()],
                 );
-                $next = $generate->nextDate($template, CarbonImmutable::parse($template->next_occurrence_on));
+                $next = $schedule->nextDate($template, CarbonImmutable::parse($template->next_occurrence_on));
                 $template->next_occurrence_on = $template->ends_on !== null && $next->toDateString() > $template->ends_on->toDateString() ? null : $next;
                 $omitted++;
             }
@@ -148,7 +149,7 @@ class RecurrenceController extends Controller
         return back()->with('status', 'Serie reanudada.'.$detail);
     }
 
-    public function skip(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, GenerateDueRecurrences $generate): RedirectResponse
+    public function skip(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, RecurrenceSchedule $schedule): RedirectResponse
     {
         $this->authorize('manageRecurrences', $project);
         $this->ensureTemplate($project, $recurrence);
@@ -156,7 +157,7 @@ class RecurrenceController extends Controller
             return back()->withErrors(['recurrence' => 'Esta serie ya no tiene próximas apariciones.']);
         }
 
-        DB::transaction(function () use ($request, $project, $recurrence, $audit, $generate): void {
+        DB::transaction(function () use ($request, $project, $recurrence, $audit, $schedule): void {
             $template = RecurrenceTemplate::query()->lockForUpdate()->findOrFail($recurrence->id);
             $before = $template->auditSnapshot();
             $scheduled = CarbonImmutable::parse($template->next_occurrence_on);
@@ -164,7 +165,7 @@ class RecurrenceController extends Controller
                 ['recurrence_template_id' => $template->id, 'scheduled_on' => $scheduled->toDateString()],
                 ['status' => RecurrenceOccurrenceStatus::Skipped, 'processed_at' => now()],
             );
-            $next = $generate->nextDate($template, $scheduled);
+            $next = $schedule->nextDate($template, $scheduled);
             $template->update([
                 'next_occurrence_on' => $template->ends_on !== null && $next->toDateString() > $template->ends_on->toDateString() ? null : $next,
                 'updated_by_user_id' => $request->user()->id,

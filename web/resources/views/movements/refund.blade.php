@@ -12,7 +12,7 @@
         <div class="linked-movement__amount"><small>Pendiente de devolver</small><strong>{{ number_format($availableCents / 100, 2, ',', '.') }} €</strong></div>
     </article>
 
-    <form class="form movement-form" action="{{ $editing ? route('movements.update', [$project, $movement]) : route('movements.refund.store', [$project, $original]) }}" method="post">
+    <form class="form movement-form" action="{{ $editing ? route('movements.update', [$project, $movement]) : route('movements.refund.store', [$project, $original]) }}" method="post" data-custom-field-kind="refund">
         @csrf
         @if ($editing) @method('patch') @endif
         <section class="wizard__section"><span class="wizard__step" aria-hidden="true">1</span><div class="wizard__content"><h2 class="wizard__title">Datos de la devolución</h2><p class="wizard__intro">Puede ser parcial; varias devoluciones nunca podrán superar el gasto original.</p><div class="form-grid">
@@ -22,6 +22,7 @@
             <div class="field field--wide"><label class="field__label" for="refund-notes">Notas <span class="field__optional">opcional</span></label><textarea class="field__control field__control--textarea" id="refund-notes" name="notes" maxlength="5000">{{ old('notes', $movement?->notes) }}</textarea></div>
             @include('movements._tags', ['selectedTagIds' => $movement?->tags?->modelKeys() ?? $original->tags->whereNull('archived_at')->modelKeys()])
             @include('movements._calendar-toggle', ['movement' => $movement])
+            @include('movements._custom-fields')
         </div></div></section>
         <div class="wizard__actions"><a class="button button--secondary" href="{{ route('movements.index', $project) }}">Cancelar</a><button class="button button--primary" type="submit">{{ $editing ? 'Guardar cambios' : 'Registrar devolución' }}</button></div>
     </form>

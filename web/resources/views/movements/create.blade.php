@@ -102,6 +102,7 @@
                     </div>
                     @include('movements._tags', ['selectedTagIds' => []])
                     @include('movements._calendar-toggle', ['movement' => null])
+                    @include('movements._custom-fields')
                 </div>
             </div>
         </section>

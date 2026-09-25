@@ -1,15 +1,15 @@
-# Seguridad y privacidad de SmartWallet 1.1
+# Seguridad y privacidad de SmartWallet 1.2
 
-Última revisión: 23 de septiembre de 2026.
+Última revisión: 24 de septiembre de 2026.
 
 ## Resultado
 
-La versión 1.1 no presenta defectos críticos conocidos dentro de su alcance
+La versión 1.2 no presenta defectos críticos conocidos dentro de su alcance
 local. La revisión incluyó código, configuración, rutas, permisos, sesiones,
 dependencias y recorridos reales contra la base aislada `smartwallet_test`.
 
 Composer y npm no comunicaron vulnerabilidades conocidas en las versiones
-bloqueadas. La suite completa superó 111 pruebas y 860 aserciones.
+bloqueadas. La suite completa superó 124 pruebas y 985 aserciones.
 
 ## Modelo de riesgo aprobado
 
@@ -124,4 +124,4 @@ directamente a Internet. El despliegue futuro deberá completar, como mínimo:
 8. exigir MFA antes de cualquier exposición de datos financieros a Internet.
 
 Estas condiciones pertenecen al futuro hito de homelab y no bloquean la versión
-1.1 limitada al PC local.
+1.2 limitada al PC local.

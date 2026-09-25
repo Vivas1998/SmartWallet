@@ -13,6 +13,7 @@ use App\Models\Movement;
 use App\Models\PlannedMovement;
 use App\Models\SavingsGoal;
 use App\Models\User;
+use App\Support\CustomFieldValues;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -22,11 +23,13 @@ final class CompletePlannedMovement
         private readonly RebuildMovementEntries $entries,
         private readonly SyncGoalAllocation $goalAllocation,
         private readonly RecordProjectAudit $audit,
+        private readonly CustomFieldValues $customFields,
     ) {}
 
     /**
      * @param  array<string, mixed>  $attributes
      * @param  list<int>  $tagIds
+     * @param  array<int, array{value_text:?string,value_number:?string,value_date:?string,value_boolean:?bool}|null>  $customValues
      */
     public function handle(
         PlannedMovement $plannedMovement,
@@ -34,8 +37,9 @@ final class CompletePlannedMovement
         array $attributes,
         array $tagIds,
         ?SavingsGoal $goal,
+        array $customValues,
     ): Movement {
-        return DB::transaction(function () use ($plannedMovement, $actor, $attributes, $tagIds, $goal): Movement {
+        return DB::transaction(function () use ($plannedMovement, $actor, $attributes, $tagIds, $goal, $customValues): Movement {
             $plan = PlannedMovement::query()
                 ->with(['project', 'tags'])
                 ->lockForUpdate()
@@ -65,6 +69,8 @@ final class CompletePlannedMovement
                 'updated_by_user_id' => $actor->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $this->customFields->copy($plan, $movement);
+            $this->customFields->sync($movement, $customValues);
             $this->entries->handle($movement);
             $this->goalAllocation->handle(
                 $movement,

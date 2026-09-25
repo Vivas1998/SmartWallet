@@ -27,6 +27,27 @@
         </aside>
 
         <div class="profile-layout__main">
+            <section class="profile-card" aria-labelledby="profile-theme-title">
+                <div class="profile-card__heading"><div><p class="eyebrow">Interfaz</p><h2 id="profile-theme-title">Apariencia</h2></div></div>
+                <p class="profile-card__intro">El modo automático sigue la preferencia del dispositivo. La elección se conserva en todos tus accesos.</p>
+                <form class="profile-form" action="{{ route('profile.theme.update') }}" method="post">
+                    @csrf
+                    @method('patch')
+                    <fieldset class="theme-options">
+                        <legend class="sr-only">Seleccionar apariencia</legend>
+                        @foreach (\App\Enums\ThemePreference::cases() as $theme)
+                            <label class="choice-card theme-option">
+                                <input name="theme_preference" type="radio" value="{{ $theme->value }}" @checked(old('theme_preference', $user->theme_preference->value) === $theme->value)>
+                                <span class="theme-option__preview theme-option__preview--{{ $theme->value }}" aria-hidden="true"><i></i><i></i></span>
+                                <span><strong>{{ $theme->label() }}</strong><small>{{ match ($theme) { \App\Enums\ThemePreference::Auto => 'Usa el modo claro u oscuro del dispositivo.', \App\Enums\ThemePreference::Light => 'Mantiene siempre la apariencia clara.', \App\Enums\ThemePreference::Dark => 'Reduce el brillo con superficies oscuras.' } }}</small></span>
+                            </label>
+                        @endforeach
+                    </fieldset>
+                    @error('theme_preference')<p class="field__error">{{ $message }}</p>@enderror
+                    <div class="profile-form__actions"><button class="button button--primary" type="submit">Guardar apariencia</button></div>
+                </form>
+            </section>
+
             <section class="profile-card" aria-labelledby="profile-name-title">
                 <div class="profile-card__heading"><div><p class="eyebrow">Identidad</p><h2 id="profile-name-title">Nombre visible</h2></div></div>
                 <p class="profile-card__intro">Es el nombre que verán los demás miembros en movimientos, proyectos y auditorías.</p>

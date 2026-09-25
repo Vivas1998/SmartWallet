@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\MovementType;
 use App\Enums\RecurrenceFrequency;
+use App\Support\CustomFieldValues;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -81,6 +82,11 @@ class RecurrenceTemplate extends Model
         return $this->belongsToMany(Tag::class)->withTimestamps();
     }
 
+    public function customFieldValues(): HasMany
+    {
+        return $this->hasMany(CustomFieldValue::class);
+    }
+
     public function formattedAmount(): string
     {
         return number_format($this->amount_cents / 100, 2, ',', '.').' €';
@@ -104,6 +110,7 @@ class RecurrenceTemplate extends Model
             'ends_on' => $this->ends_on?->toDateString(),
             'paused_at' => $this->paused_at?->toIso8601String(),
             'tag_ids' => $this->tags()->orderBy('tags.id')->pluck('tags.id')->all(),
+            'custom_fields' => app(CustomFieldValues::class)->snapshot($this),
         ];
     }
 }

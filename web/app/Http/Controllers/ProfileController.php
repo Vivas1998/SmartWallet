@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\ThemePreference;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,20 @@ class ProfileController extends Controller
         $request->user()->update(['name' => $validated['name']]);
 
         return redirect()->route('profile.show')->with('status', 'Nombre actualizado.');
+    }
+
+    public function updateTheme(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme_preference' => ['required', Rule::enum(ThemePreference::class)],
+        ], [
+            'theme_preference.required' => 'Selecciona una apariencia.',
+            'theme_preference.enum' => 'La apariencia seleccionada no es válida.',
+        ]);
+
+        $request->user()->update(['theme_preference' => $validated['theme_preference']]);
+
+        return back()->with('status', 'Apariencia actualizada.');
     }
 
     public function updateEmail(Request $request): RedirectResponse

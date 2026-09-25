@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Audit\RecordProjectAudit;
 use App\Actions\Budgets\ResolveMonthlyBudget;
+use App\Actions\Projects\BuildProjectCardBudgetSummaries;
 use App\Actions\Projects\CreateProject;
 use App\Actions\Reports\BuildProjectMonthSummary;
 use App\Enums\FinancialAccountType;
@@ -20,8 +21,9 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, BuildProjectCardBudgetSummaries $budgetSummaries): View
     {
+        $month = CarbonImmutable::now('Europe/Madrid')->startOfMonth();
         $projects = $request->user()
             ->projects()
             ->with(['latestAuditLog.actor'])
@@ -38,7 +40,12 @@ class ProjectController extends Controller
             ->limit(10)
             ->get();
 
-        return view('projects.index', compact('projects', 'recentActivities'));
+        return view('projects.index', [
+            'projects' => $projects,
+            'recentActivities' => $recentActivities,
+            'budgetMonth' => $month,
+            'projectBudgetSummaries' => $budgetSummaries->handle($projects, $month),
+        ]);
     }
 
     public function create(): View

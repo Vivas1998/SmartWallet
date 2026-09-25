@@ -9,6 +9,7 @@ use App\Actions\Budgets\ResolveMonthlyBudget;
 use App\Enums\CategoryType;
 use App\Enums\MovementType;
 use App\Models\BudgetTemplate;
+use App\Models\Category;
 use App\Models\MonthlyBudget;
 use App\Models\Project;
 use App\Support\Money;
@@ -33,6 +34,11 @@ class BudgetController extends Controller
         $categories = $project->categories()
             ->whereNull('parent_id')
             ->where('type', CategoryType::Expense->value)
+            ->with(['children' => fn ($query) => $query
+                ->where('type', CategoryType::Expense->value)
+                ->orderByRaw('archived_at is not null')
+                ->orderBy('position')
+                ->orderBy('name')])
             ->orderByRaw('archived_at is not null')
             ->orderBy('position')
             ->orderBy('name')
@@ -40,16 +46,37 @@ class BudgetController extends Controller
 
         $expense = MovementType::Expense->value;
         $refund = MovementType::Refund->value;
-        $spentByCategory = $project->movements()
+        $spentRows = $project->movements()
             ->whereNull('trashed_at')
             ->whereIn('type', [$expense, $refund])
             ->whereBetween('occurred_on', [$month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString()])
-            ->selectRaw("category_id, SUM(CASE WHEN type = '{$expense}' THEN amount_cents ELSE -amount_cents END) as total_cents")
-            ->groupBy('category_id')
-            ->pluck('total_cents', 'category_id')
-            ->map(fn ($value): int => (int) $value);
+            ->selectRaw("category_id, subcategory_id, SUM(CASE WHEN type = '{$expense}' THEN amount_cents ELSE -amount_cents END) as total_cents")
+            ->groupBy('category_id', 'subcategory_id')
+            ->get();
 
-        $spentCents = $spentByCategory->sum();
+        $spentByCategory = collect();
+        $spentBySubcategory = collect();
+        $spentWithoutSubcategory = collect();
+        $spentCents = 0;
+
+        foreach ($spentRows as $row) {
+            $value = (int) $row->total_cents;
+            $spentCents += $value;
+
+            if ($row->category_id === null) {
+                continue;
+            }
+
+            $categoryId = (int) $row->category_id;
+            $spentByCategory[$categoryId] = (int) ($spentByCategory[$categoryId] ?? 0) + $value;
+
+            if ($row->subcategory_id === null) {
+                $spentWithoutSubcategory[$categoryId] = (int) ($spentWithoutSubcategory[$categoryId] ?? 0) + $value;
+            } else {
+                $subcategoryId = (int) $row->subcategory_id;
+                $spentBySubcategory[$subcategoryId] = (int) ($spentBySubcategory[$subcategoryId] ?? 0) + $value;
+            }
+        }
 
         return view('budgets.index', [
             'project' => $project,
@@ -58,7 +85,9 @@ class BudgetController extends Controller
             'categories' => $categories,
             'limits' => $budget->limits->keyBy('category_id'),
             'spentByCategory' => $spentByCategory,
-            'spentCents' => (int) $spentCents,
+            'spentBySubcategory' => $spentBySubcategory,
+            'spentWithoutSubcategory' => $spentWithoutSubcategory,
+            'spentCents' => $spentCents,
             'remainingCents' => $budget->total_limit_cents - $spentCents,
             'canManage' => $request->user()->can('manageBudgets', $project),
         ]);
@@ -81,15 +110,30 @@ class BudgetController extends Controller
 
         $month = $this->monthFrom($validated['month']);
         $totalCents = Money::toCents($validated['total_limit']);
-        $activeCategories = $project->categories()
-            ->whereNull('parent_id')
+        $expenseCategories = $project->categories()
             ->where('type', CategoryType::Expense->value)
-            ->whereNull('archived_at')
-            ->pluck('id');
+            ->with('parent:id,archived_at')
+            ->get();
+        $activeMainIds = $expenseCategories
+            ->filter(fn (Category $category): bool => $category->isMain() && ! $category->isArchived())
+            ->modelKeys();
+        $editableCategories = $expenseCategories
+            ->filter(fn (Category $category): bool => ! $category->isArchived()
+                && ($category->isMain() || in_array($category->parent_id, $activeMainIds, true)));
+        $editableCategoryIds = $editableCategories->modelKeys();
+        $allExpenseCategoryIds = $expenseCategories->modelKeys();
+        $submittedLimits = $validated['limits'] ?? [];
+        $submittedCategoryIds = array_map('intval', array_keys($submittedLimits));
+
+        if (array_diff($submittedCategoryIds, $editableCategoryIds) !== []) {
+            throw ValidationException::withMessages([
+                'limits' => 'Solo puedes asignar límites a categorías y subcategorías de gasto activas de este proyecto.',
+            ]);
+        }
 
         $limits = [];
-        foreach ($activeCategories as $categoryId) {
-            $raw = (string) ($validated['limits'][$categoryId] ?? '0');
+        foreach ($editableCategoryIds as $categoryId) {
+            $raw = (string) ($submittedLimits[$categoryId] ?? '0');
             $limits[(int) $categoryId] = $raw === '' ? 0 : Money::toCents($raw);
         }
 
@@ -97,15 +141,37 @@ class BudgetController extends Controller
             throw ValidationException::withMessages(['total_limit' => 'El presupuesto no puede ser negativo.']);
         }
 
+        $preview = $resolveBudget->preview($project, $month);
+        $effectiveLimits = $preview->limits
+            ->mapWithKeys(fn ($limit): array => [(int) $limit->category_id => (int) $limit->limit_cents])
+            ->all();
+
+        foreach ($limits as $categoryId => $limitCents) {
+            $effectiveLimits[$categoryId] = $limitCents;
+        }
+
+        foreach ($expenseCategories->whereNull('parent_id')->whereNull('archived_at') as $category) {
+            $childLimitCents = $expenseCategories
+                ->where('parent_id', $category->id)
+                ->sum(fn (Category $child): int => (int) ($effectiveLimits[$child->id] ?? 0));
+            $parentLimitCents = (int) ($effectiveLimits[$category->id] ?? 0);
+
+            if ($childLimitCents > $parentLimitCents) {
+                throw ValidationException::withMessages([
+                    'limits.'.$category->id => 'La suma de límites de las subcategorías de '.$category->name.' no puede superar su límite principal.',
+                ]);
+            }
+        }
+
         $budget = $resolveBudget->handle($project, $month);
         $before = $this->budgetSnapshot($budget->load('limits'));
 
-        DB::transaction(function () use ($request, $project, $budget, $month, $totalCents, $limits, $activeCategories, $validated, $before, $audit): void {
+        DB::transaction(function () use ($request, $project, $budget, $month, $totalCents, $limits, $editableCategoryIds, $allExpenseCategoryIds, $validated, $before, $audit): void {
             $budget->update([
                 'total_limit_cents' => $totalCents,
                 'updated_by_user_id' => $request->user()->id,
             ]);
-            $this->replaceActiveLimits($budget, $limits, $activeCategories->all());
+            $this->replaceEditableLimits($budget, $limits, $editableCategoryIds);
 
             if ($validated['scope'] === 'future') {
                 $template = BudgetTemplate::query()->updateOrCreate(
@@ -116,7 +182,7 @@ class BudgetController extends Controller
                         'updated_by_user_id' => $request->user()->id,
                     ],
                 );
-                $template->limits()->whereIn('category_id', $activeCategories)->delete();
+                $template->limits()->whereIn('category_id', $allExpenseCategoryIds)->delete();
                 foreach ($limits as $categoryId => $limitCents) {
                     $template->limits()->create(['category_id' => $categoryId, 'limit_cents' => $limitCents]);
                 }
@@ -133,10 +199,10 @@ class BudgetController extends Controller
                 : 'Presupuesto actualizado únicamente para este mes.');
     }
 
-    /** @param array<int, int> $limits @param list<int> $activeCategoryIds */
-    private function replaceActiveLimits(MonthlyBudget $budget, array $limits, array $activeCategoryIds): void
+    /** @param array<int, int> $limits @param list<int> $editableCategoryIds */
+    private function replaceEditableLimits(MonthlyBudget $budget, array $limits, array $editableCategoryIds): void
     {
-        $budget->limits()->whereIn('category_id', $activeCategoryIds)->delete();
+        $budget->limits()->whereIn('category_id', $editableCategoryIds)->delete();
         foreach ($limits as $categoryId => $limitCents) {
             $budget->limits()->create(['category_id' => $categoryId, 'limit_cents' => $limitCents]);
         }

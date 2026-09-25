@@ -1,5 +1,14 @@
 document.documentElement.classList.add('js');
 
+document.querySelectorAll('[data-theme-form]').forEach((form) => {
+    const select = form.querySelector('[data-theme-select]');
+
+    select.addEventListener('change', () => {
+        document.documentElement.dataset.theme = select.value;
+        form.requestSubmit();
+    });
+});
+
 document.querySelectorAll('[data-confirm]').forEach((form) => {
     form.addEventListener('submit', (event) => {
         if (! window.confirm(form.dataset.confirm)) {
@@ -319,4 +328,43 @@ document.querySelectorAll('[data-closure-allocation-form]').forEach((form) => {
 
     destination.addEventListener('change', synchronizeClosureGoals);
     synchronizeClosureGoals();
+});
+
+document.querySelectorAll('[data-custom-fields]').forEach((panel) => {
+    const form = panel.closest('form');
+    if (! form) return;
+
+    const standardType = form.querySelector('[data-movement-type]');
+    const recurrenceKind = form.querySelector('[data-recurrence-kind]');
+    const source = form.querySelector('[data-custom-field-source], [data-recurrence-source]');
+    const destination = form.querySelector('[data-custom-field-destination], [data-recurrence-destination]');
+    const goal = form.querySelector('[data-recurrence-goal]');
+
+    const selectedAccountType = (control) => control?.selectedOptions?.[0]?.dataset.accountType || '';
+    const currentType = () => {
+        const kind = standardType?.value || recurrenceKind?.value || form.dataset.customFieldKind || 'expense';
+        if (kind !== 'transfer') return kind;
+
+        return [selectedAccountType(source), selectedAccountType(destination)].includes('external_investment')
+            ? 'investment_contribution'
+            : 'transfer';
+    };
+
+    const synchronizeCustomFields = () => {
+        const type = currentType();
+
+        panel.querySelectorAll('[data-custom-field]').forEach((field) => {
+            if (field.hasAttribute('data-custom-field-historical')) return;
+            const applicable = (field.dataset.customFieldTypes || '').split(' ').includes(type);
+            field.hidden = ! applicable;
+            field.querySelectorAll('input, select, textarea').forEach((control) => {
+                control.disabled = ! applicable;
+            });
+        });
+    };
+
+    [standardType, recurrenceKind, source, destination, goal].filter(Boolean).forEach((control) => {
+        control.addEventListener('change', synchronizeCustomFields);
+    });
+    synchronizeCustomFields();
 });

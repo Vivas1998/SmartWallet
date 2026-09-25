@@ -14,6 +14,7 @@ use App\Models\RecurrenceOccurrence;
 use App\Models\RecurrenceRecoveryNotice;
 use App\Models\RecurrenceTemplate;
 use App\Services\Recurrences\RecurrenceSchedule;
+use App\Support\CustomFieldValues;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,7 @@ final class GenerateDueRecurrences
         private readonly SyncGoalAllocation $goalAllocation,
         private readonly RecordProjectAudit $audit,
         private readonly RecurrenceSchedule $schedule,
+        private readonly CustomFieldValues $customFields,
     ) {}
 
     /** @return array{generated:int, projects:array<int, list<array{concept:string,date:string,amount_cents:int}>>} */
@@ -122,6 +124,7 @@ final class GenerateDueRecurrences
             'updated_by_user_id' => $template->created_by_user_id,
         ]);
         $movement->tags()->sync($template->tags->modelKeys());
+        $this->customFields->copy($template, $movement);
         $this->entries->handle($movement);
         if ($template->savingsGoal !== null) {
             $this->goalAllocation->handle($movement, $template->savingsGoal, GoalAllocationDirection::Contribution);

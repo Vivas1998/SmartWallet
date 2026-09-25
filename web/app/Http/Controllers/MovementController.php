@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Audit\RecordProjectAudit;
 use App\Actions\Budgets\BuildMonthlyClosure;
+use App\Actions\CustomFields\ApplyCustomFieldFilters;
 use App\Actions\Movements\RebuildMovementEntries;
 use App\Actions\SavingsGoals\SyncGoalAllocation;
 use App\Enums\CategoryType;
@@ -18,6 +19,7 @@ use App\Models\Movement;
 use App\Models\Project;
 use App\Models\SavingsGoal;
 use App\Models\User;
+use App\Support\CustomFieldValues;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +31,7 @@ use Illuminate\View\View;
 
 class MovementController extends Controller
 {
-    public function index(Request $request, Project $project): View
+    public function index(Request $request, Project $project, ApplyCustomFieldFilters $customFieldFilters): View
     {
         $this->authorize('view', $project);
         $request->validate([
@@ -42,8 +44,8 @@ class MovementController extends Controller
         $rangeEnd = $customRange ? CarbonImmutable::parse($request->query('to'), 'Europe/Madrid')->startOfDay() : $month->endOfMonth();
         $typeValues = array_map(fn (MovementType $type): string => $type->value, MovementType::cases());
 
-        $movements = $project->movements()
-            ->with(['category', 'subcategory', 'account', 'destinationAccount', 'paidBy', 'originalMovement', 'plannedMovement', 'tags'])
+        $movementQuery = $project->movements()->getQuery()
+            ->with(['category', 'subcategory', 'account', 'destinationAccount', 'paidBy', 'originalMovement', 'plannedMovement', 'tags', 'customFieldValues.definition'])
             ->withSum(['refunds as refunded_cents' => fn ($query) => $query->whereNull('trashed_at')], 'amount_cents')
             ->whereNull('trashed_at')
             ->whereBetween('occurred_on', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
@@ -54,8 +56,9 @@ class MovementController extends Controller
             ->when($request->filled('category'), fn ($query) => $query->where('category_id', $request->integer('category')))
             ->when($request->filled('member'), fn ($query) => $query->where('paid_by_user_id', $request->integer('member')))
             ->when($request->filled('tag'), fn ($query) => $query->whereHas('tags', fn ($tags) => $tags->whereKey($request->integer('tag'))))
-            ->when($request->filled('search'), fn ($query) => $query->where('concept', 'like', '%'.trim((string) $request->query('search')).'%'))
-            ->latest('occurred_on')->latest('id')->paginate(30)->withQueryString();
+            ->when($request->filled('search'), fn ($query) => $query->where('concept', 'like', '%'.trim((string) $request->query('search')).'%'));
+        $customFieldFilters->handle($request, $project, $movementQuery);
+        $movements = $movementQuery->latest('occurred_on')->latest('id')->paginate(30)->withQueryString();
 
         return view('movements.index', [
             'project' => $project,
@@ -68,6 +71,7 @@ class MovementController extends Controller
             'accounts' => $project->financialAccounts()->orderByRaw('archived_at is not null')->orderBy('position')->get(),
             'members' => $project->activeMembers()->orderBy('name')->get(),
             'tags' => $project->tags()->orderByRaw('archived_at is not null')->orderBy('name')->get(),
+            'customFieldDefinitions' => $project->customFieldDefinitions()->orderByRaw('archived_at is not null')->orderBy('position')->get(),
         ]);
     }
 
@@ -82,18 +86,19 @@ class MovementController extends Controller
         ], $this->selectorData($project)));
     }
 
-    public function store(Request $request, Project $project, RebuildMovementEntries $entries, RecordProjectAudit $audit): RedirectResponse
+    public function store(Request $request, Project $project, RebuildMovementEntries $entries, RecordProjectAudit $audit, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('recordMovements', $project);
         [$validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy] = $this->validatedStandardMovement($request, $project);
         $tagIds = $this->validatedTagIds($request, $project);
+        $customValues = $customFields->validate($request, $project, $type);
         $duplicate = $this->possibleDuplicate($project, $category, $subcategory, $occurredOn, $amountCents);
 
         if ($duplicate !== null && ! $request->boolean('allow_duplicate')) {
             return $this->duplicateResponse($duplicate);
         }
 
-        DB::transaction(function () use ($project, $request, $validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy, $tagIds, $entries, $audit): void {
+        DB::transaction(function () use ($project, $request, $validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy, $tagIds, $customValues, $entries, $audit, $customFields): void {
             $movement = Movement::create([
                 'project_id' => $project->id,
                 'type' => $type,
@@ -110,6 +115,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $customFields->sync($movement, $customValues);
             $entries->handle($movement);
             $audit->handle($project, $request->user(), 'movement', $movement->id, 'created', null, $movement->auditSnapshot());
         });
@@ -118,7 +124,7 @@ class MovementController extends Controller
             ->with('status', $type === MovementType::Expense ? 'Gasto registrado correctamente.' : 'Ingreso registrado correctamente.');
     }
 
-    public function createTransfer(Project $project): View
+    public function createTransfer(Project $project, CustomFieldValues $customFields): View
     {
         $this->authorize('recordMovements', $project);
 
@@ -130,16 +136,19 @@ class MovementController extends Controller
             'goal' => null,
             'goalDirection' => null,
             'tags' => $project->tags()->whereNull('archived_at')->orderBy('name')->get(),
+            'customFieldDefinitions' => $customFields->definitionsForForm($project),
+            'customFieldValues' => collect(),
         ]);
     }
 
-    public function storeTransfer(Request $request, Project $project, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit): RedirectResponse
+    public function storeTransfer(Request $request, Project $project, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('recordMovements', $project);
         [$validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection] = $this->validatedTransfer($request, $project);
         $tagIds = $this->validatedTagIds($request, $project);
+        $customValues = $customFields->validate($request, $project, $type);
 
-        DB::transaction(function () use ($request, $project, $validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection, $tagIds, $entries, $goalAllocation, $audit): void {
+        DB::transaction(function () use ($request, $project, $validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection, $tagIds, $customValues, $entries, $goalAllocation, $audit, $customFields): void {
             $movement = Movement::create([
                 'project_id' => $project->id,
                 'type' => $type,
@@ -154,6 +163,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $customFields->sync($movement, $customValues);
             $entries->handle($movement);
             $goalAllocation->handle($movement, $goal, $goalDirection);
             $audit->handle($project, $request->user(), 'movement', $movement->id, 'created', null, $movement->auditSnapshot());
@@ -163,7 +173,7 @@ class MovementController extends Controller
             ->with('status', $type === MovementType::InvestmentContribution ? 'Movimiento de inversión registrado sin alterar el presupuesto.' : 'Transferencia registrada sin contar como ingreso ni gasto.');
     }
 
-    public function createRefund(Project $project, Movement $movement): View
+    public function createRefund(Project $project, Movement $movement, CustomFieldValues $customFields): View
     {
         $this->authorize('recordMovements', $project);
         $this->ensureMovement($project, $movement);
@@ -176,18 +186,21 @@ class MovementController extends Controller
             'refundedCents' => (int) $movement->refunds()->whereNull('trashed_at')->sum('amount_cents'),
             'today' => CarbonImmutable::now('Europe/Madrid')->toDateString(),
             'tags' => $project->tags()->whereNull('archived_at')->orderBy('name')->get(),
+            'customFieldDefinitions' => $customFields->definitionsForForm($project),
+            'customFieldValues' => collect(),
         ]);
     }
 
-    public function storeRefund(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, RecordProjectAudit $audit): RedirectResponse
+    public function storeRefund(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, RecordProjectAudit $audit, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('recordMovements', $project);
         $this->ensureMovement($project, $movement);
         $this->ensureRefundableExpense($movement);
         [$validated, $amountCents, $occurredOn] = $this->validatedRefund($request, $movement);
         $tagIds = $this->validatedTagIds($request, $project);
+        $customValues = $customFields->validate($request, $project, MovementType::Refund);
 
-        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $tagIds, $entries, $audit): void {
+        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $tagIds, $customValues, $entries, $audit, $customFields): void {
             $refund = Movement::create([
                 'project_id' => $project->id,
                 'type' => MovementType::Refund,
@@ -205,6 +218,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $refund->tags()->sync($tagIds);
+            $customFields->sync($refund, $customValues);
             $entries->handle($refund);
             $audit->handle($project, $request->user(), 'movement', $refund->id, 'created', null, $refund->auditSnapshot());
         });
@@ -213,7 +227,7 @@ class MovementController extends Controller
             ->with('status', 'Devolución registrada. El gasto neto y el presupuesto se han actualizado.');
     }
 
-    public function edit(Request $request, Project $project, Movement $movement): View
+    public function edit(Request $request, Project $project, Movement $movement, CustomFieldValues $customFields): View
     {
         $this->authorize('recordMovements', $project);
         $this->ensureActiveMovement($project, $movement);
@@ -229,6 +243,8 @@ class MovementController extends Controller
                 'goal' => $movement->goalAllocation?->savingsGoal,
                 'goalDirection' => $movement->goalAllocation?->direction,
                 'tags' => $project->tags()->where(fn ($query) => $query->whereNull('archived_at')->orWhereHas('movements', fn ($movements) => $movements->whereKey($movement->id)))->orderBy('name')->get(),
+                'customFieldDefinitions' => $customFields->definitionsForForm($project, $movement),
+                'customFieldValues' => $movement->customFieldValues()->with('definition')->get(),
             ]);
         }
         if ($movement->type === MovementType::Refund) {
@@ -239,6 +255,8 @@ class MovementController extends Controller
                 'refundedCents' => 0,
                 'today' => CarbonImmutable::now('Europe/Madrid')->toDateString(),
                 'tags' => $project->tags()->where(fn ($query) => $query->whereNull('archived_at')->orWhereHas('movements', fn ($movements) => $movements->whereKey($movement->id)))->orderBy('name')->get(),
+                'customFieldDefinitions' => $customFields->definitionsForForm($project, $movement),
+                'customFieldValues' => $movement->customFieldValues()->with('definition')->get(),
             ]);
         }
 
@@ -247,23 +265,24 @@ class MovementController extends Controller
             'movement' => $movement,
             'today' => CarbonImmutable::now('Europe/Madrid')->toDateString(),
             'possibleDuplicate' => $request->session()->get('possible_duplicate'),
-        ], $this->selectorData($project, $movement)));
+        ], $this->selectorData($project, $movement, $customFields)));
     }
 
-    public function update(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit, BuildMonthlyClosure $closures): RedirectResponse
+    public function update(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit, BuildMonthlyClosure $closures, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('recordMovements', $project);
         $this->ensureActiveMovement($project, $movement);
 
         if (in_array($movement->type, [MovementType::Transfer, MovementType::InvestmentContribution], true)) {
-            return $this->updateTransfer($request, $project, $movement, $entries, $goalAllocation, $audit, $closures);
+            return $this->updateTransfer($request, $project, $movement, $entries, $goalAllocation, $audit, $closures, $customFields);
         }
         if ($movement->type === MovementType::Refund) {
-            return $this->updateRefund($request, $project, $movement, $entries, $audit);
+            return $this->updateRefund($request, $project, $movement, $entries, $audit, $customFields);
         }
 
         [$validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy] = $this->validatedStandardMovement($request, $project, $movement);
         $tagIds = $this->validatedTagIds($request, $project, $movement);
+        $customValues = $customFields->validate($request, $project, $type);
         $duplicate = $this->possibleDuplicate($project, $category, $subcategory, $occurredOn, $amountCents, $movement);
         if ($duplicate !== null && ! $request->boolean('allow_duplicate')) {
             return $this->duplicateResponse($duplicate);
@@ -278,7 +297,7 @@ class MovementController extends Controller
             throw ValidationException::withMessages(['occurred_on' => 'La fecha del gasto no puede ser posterior a una devolución vinculada.']);
         }
 
-        DB::transaction(function () use ($request, $project, $movement, $validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy, $tagIds, $entries, $audit): void {
+        DB::transaction(function () use ($request, $project, $movement, $validated, $type, $amountCents, $occurredOn, $category, $subcategory, $account, $paidBy, $tagIds, $customValues, $entries, $audit, $customFields): void {
             $before = $movement->auditSnapshot();
             $movement->update([
                 'type' => $type,
@@ -294,6 +313,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $customFields->sync($movement, $customValues);
             $entries->handle($movement->fresh());
             $audit->handle($project, $request->user(), 'movement', $movement->id, 'updated', $before, $movement->fresh()->auditSnapshot());
 
@@ -377,12 +397,13 @@ class MovementController extends Controller
         return back()->with('status', 'Movimiento restaurado y saldos recalculados.');
     }
 
-    private function updateTransfer(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit, BuildMonthlyClosure $closures): RedirectResponse
+    private function updateTransfer(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, SyncGoalAllocation $goalAllocation, RecordProjectAudit $audit, BuildMonthlyClosure $closures, CustomFieldValues $customFields): RedirectResponse
     {
         [$validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection] = $this->validatedTransfer($request, $project, $movement, $closures);
         $leftoverMonth = $movement->leftoverAllocation?->budget_month;
         $tagIds = $this->validatedTagIds($request, $project, $movement);
-        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection, $tagIds, $entries, $goalAllocation, $audit): void {
+        $customValues = $customFields->validate($request, $project, $type);
+        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $source, $destination, $type, $goal, $goalDirection, $tagIds, $customValues, $entries, $goalAllocation, $audit, $customFields): void {
             $before = $movement->auditSnapshot();
             $movement->update([
                 'type' => $type,
@@ -396,6 +417,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $customFields->sync($movement, $customValues);
             $entries->handle($movement->fresh());
             $goalAllocation->handle($movement, $goal, $goalDirection);
             $audit->handle($project, $request->user(), 'movement', $movement->id, 'updated', $before, $movement->fresh()->auditSnapshot());
@@ -409,14 +431,15 @@ class MovementController extends Controller
         return redirect()->route('movements.index', ['project' => $project, 'month' => $occurredOn->format('Y-m')])->with('status', 'Transferencia actualizada y ambos saldos recalculados.');
     }
 
-    private function updateRefund(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, RecordProjectAudit $audit): RedirectResponse
+    private function updateRefund(Request $request, Project $project, Movement $movement, RebuildMovementEntries $entries, RecordProjectAudit $audit, CustomFieldValues $customFields): RedirectResponse
     {
         $original = $movement->originalMovement;
         abort_if($original === null, 404);
         [$validated, $amountCents, $occurredOn] = $this->validatedRefund($request, $original, $movement);
         $tagIds = $this->validatedTagIds($request, $project, $movement);
+        $customValues = $customFields->validate($request, $project, MovementType::Refund);
 
-        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $tagIds, $entries, $audit): void {
+        DB::transaction(function () use ($request, $project, $movement, $validated, $amountCents, $occurredOn, $tagIds, $customValues, $entries, $audit, $customFields): void {
             $before = $movement->auditSnapshot();
             $movement->update([
                 'amount_cents' => $amountCents,
@@ -427,6 +450,7 @@ class MovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $movement->tags()->sync($tagIds);
+            $customFields->sync($movement, $customValues);
             $entries->handle($movement->fresh());
             $audit->handle($project, $request->user(), 'movement', $movement->id, 'updated', $before, $movement->fresh()->auditSnapshot());
         });
@@ -656,7 +680,7 @@ class MovementController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function selectorData(Project $project, ?Movement $current = null): array
+    private function selectorData(Project $project, ?Movement $current = null, ?CustomFieldValues $customFields = null): array
     {
         return [
             'categories' => $project->categories()->whereNull('parent_id')
@@ -668,6 +692,8 @@ class MovementController extends Controller
                 ->orderBy('position')->get(),
             'members' => $project->activeMembers()->orderBy('name')->get(),
             'tags' => $project->tags()->where(fn ($query) => $query->whereNull('archived_at')->when($current !== null, fn ($tags) => $tags->orWhereHas('movements', fn ($movements) => $movements->whereKey($current->id))))->orderBy('name')->get(),
+            'customFieldDefinitions' => ($customFields ?? app(CustomFieldValues::class))->definitionsForForm($project, $current),
+            'customFieldValues' => $current?->customFieldValues()->with('definition')->get() ?? collect(),
         ];
     }
 

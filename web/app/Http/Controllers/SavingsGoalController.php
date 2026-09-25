@@ -9,6 +9,7 @@ use App\Enums\FinancialAccountType;
 use App\Enums\GoalAllocationDirection;
 use App\Models\Project;
 use App\Models\SavingsGoal;
+use App\Support\CustomFieldValues;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -106,7 +107,7 @@ class SavingsGoalController extends Controller
         return back()->with('status', 'Objetivo archivado. Su progreso y sus movimientos se conservan.'.$detail);
     }
 
-    public function contribute(Request $request, Project $project, SavingsGoal $goal): View
+    public function contribute(Request $request, Project $project, SavingsGoal $goal, CustomFieldValues $customFields): View
     {
         $this->authorize('contributeToSavingsGoals', $project);
         $this->ensureGoal($project, $goal);
@@ -121,6 +122,8 @@ class SavingsGoalController extends Controller
             'goal' => $goal->load('account'),
             'goalDirection' => $direction,
             'tags' => $project->tags()->whereNull('archived_at')->orderBy('name')->get(),
+            'customFieldDefinitions' => $customFields->definitionsForForm($project),
+            'customFieldValues' => collect(),
         ]);
     }
 

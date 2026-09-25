@@ -3,6 +3,11 @@
 @section('title', 'Mis proyectos')
 
 @section('content')
+    @php
+        $formatMoney = fn (int $cents): string => number_format($cents / 100, 2, ',', '.').' €';
+        $budgetMonthLabel = ucfirst($budgetMonth->locale('es')->translatedFormat('F Y'));
+    @endphp
+
     <header class="page-heading">
         <div class="page-heading__copy">
             <p class="eyebrow">Espacios financieros independientes</p>
@@ -24,6 +29,7 @@
     @else
         <div class="project-grid">
             @foreach ($projects as $project)
+                @php($budgetSummary = $projectBudgetSummaries[$project->id])
                 <article class="project-card">
                     <a class="project-card__link" href="{{ route('projects.show', $project) }}">
                         <span
@@ -48,6 +54,49 @@
                                 ·
                                 {{ $project->pivot->role === 'owner' ? 'Propietario' : 'Miembro' }}
                             </span>
+
+                            @if ($budgetSummary['has_budget'])
+                                <span
+                                    class="project-card__budget project-card__budget--{{ $budgetSummary['state'] }}"
+                                    data-budget-project="{{ $project->id }}"
+                                    data-budget-state="{{ $budgetSummary['state'] }}"
+                                    data-budget-summary="{{ $project->id }}:{{ $budgetSummary['state'] }}"
+                                >
+                                    <span class="project-card__budget-heading">
+                                        <span>
+                                            <small>Disponible · {{ $budgetMonthLabel }}</small>
+                                            <strong>{{ $formatMoney($budgetSummary['remaining_cents']) }}</strong>
+                                        </span>
+                                        <span class="project-card__budget-percentage">{{ $budgetSummary['percentage'] }}%</span>
+                                    </span>
+                                    <span
+                                        class="project-card__budget-progress"
+                                        role="progressbar"
+                                        aria-label="Presupuesto consumido en {{ $project->name }}"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-valuenow="{{ $budgetSummary['progress_percentage'] }}"
+                                        aria-valuetext="{{ $budgetSummary['percentage'] }} % consumido"
+                                    >
+                                        <span style="--budget-progress: {{ $budgetSummary['progress_percentage'] }}%"></span>
+                                    </span>
+                                    <span class="project-card__budget-detail">
+                                        {{ $formatMoney($budgetSummary['expense_cents']) }} gastados
+                                        · {{ $formatMoney($budgetSummary['budget_cents']) }} de presupuesto
+                                    </span>
+                                </span>
+                            @else
+                                <span
+                                    class="project-card__budget project-card__budget--empty"
+                                    data-budget-project="{{ $project->id }}"
+                                    data-budget-state="empty"
+                                    data-budget-summary="{{ $project->id }}:empty"
+                                >
+                                    <span class="project-card__budget-empty-title">Sin presupuesto para este mes</span>
+                                    <span class="project-card__budget-detail">{{ $budgetMonthLabel }}</span>
+                                </span>
+                            @endif
+
                             <span class="project-card__activity">
                                 @if ($project->latestAuditLog)
                                     Última actividad {{ $project->latestAuditLog->created_at->diffForHumans() }}

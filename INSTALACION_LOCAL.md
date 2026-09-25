@@ -38,7 +38,7 @@ genera una clave Laravel única y aplica todas las migraciones. La descarga inic
 de dependencias puede tardar varios minutos.
 
 Como alternativa para recrear rápidamente una base completamente vacía, el
-repositorio incluye el DDL consolidado de SmartWallet 1.1.1. Debe usarse antes
+repositorio incluye el DDL consolidado del desarrollo actual. Debe usarse antes
 del primer arranque y nunca sobre una base que ya contenga tablas:
 
 ```powershell
@@ -48,7 +48,7 @@ del primer arranque y nunca sobre una base que ya contenga tablas:
 
 El inicializador arranca únicamente MySQL, se niega a continuar si encuentra una
 base utilizada, importa `web/database/ddl/smartwallet.mysql.sql` y verifica las
-17 migraciones. El DDL contiene toda la estructura, índices, claves foráneas e
+19 migraciones. El DDL contiene toda la estructura, índices, claves foráneas e
 historial técnico de migraciones, pero no usuarios ni datos financieros.
 
 Después abre [http://localhost:8010/registro](http://localhost:8010/registro) y
@@ -146,7 +146,7 @@ El script comprueba que el identificador de versión sea coherente, valida Docke
 Compose, arranca el entorno, revisa las migraciones y el formato PHP, compila los
 recursos, ejecuta toda la suite en `smartwallet_test` y confirma que la pantalla de
 acceso responda. No sustituye la revisión humana con zoom nativo al 200 % indicada
-en [Liberación local de SmartWallet 1.1](LIBERACION_1_1.md).
+en [Liberación local de SmartWallet 1.2](LIBERACION_1_2.md).
 
 ## Correo local
 
@@ -173,7 +173,7 @@ Problemas habituales:
 
 ## Conservación y eliminación de datos
 
-La versión 1.1 local no realiza copias de seguridad automáticas. Mientras no se
+La versión 1.2 local no realiza copias de seguridad automáticas. Mientras no se
 elimine el volumen `smartwallet_mysql_data`, detener, reconstruir o sustituir un
 contenedor conserva los datos.
 

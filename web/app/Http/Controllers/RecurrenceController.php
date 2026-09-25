@@ -16,6 +16,7 @@ use App\Models\Project;
 use App\Models\RecurrenceOccurrence;
 use App\Models\RecurrenceTemplate;
 use App\Services\Recurrences\RecurrenceSchedule;
+use App\Support\CustomFieldValues;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -51,13 +52,14 @@ class RecurrenceController extends Controller
         return view('recurrences.form', $this->formData($project));
     }
 
-    public function store(Request $request, Project $project, RecordProjectAudit $audit, GenerateDueRecurrences $generate): RedirectResponse
+    public function store(Request $request, Project $project, RecordProjectAudit $audit, GenerateDueRecurrences $generate, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('manageRecurrences', $project);
         $attributes = $this->validatedAttributes($request, $project);
         $tagIds = $this->validatedTagIds($request, $project);
+        $customValues = $customFields->validate($request, $project, $attributes['type']);
 
-        DB::transaction(function () use ($request, $project, $attributes, $tagIds, $audit): void {
+        DB::transaction(function () use ($request, $project, $attributes, $tagIds, $customValues, $audit, $customFields): void {
             $template = RecurrenceTemplate::create([
                 'project_id' => $project->id,
                 ...$attributes,
@@ -65,6 +67,7 @@ class RecurrenceController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $template->tags()->sync($tagIds);
+            $customFields->sync($template, $customValues);
             $audit->handle($project, $request->user(), 'recurrence', $template->id, 'created', null, $template->auditSnapshot());
         });
 
@@ -82,17 +85,19 @@ class RecurrenceController extends Controller
         return view('recurrences.form', $this->formData($project, $recurrence));
     }
 
-    public function update(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, GenerateDueRecurrences $generate): RedirectResponse
+    public function update(Request $request, Project $project, RecurrenceTemplate $recurrence, RecordProjectAudit $audit, GenerateDueRecurrences $generate, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('manageRecurrences', $project);
         $this->ensureTemplate($project, $recurrence);
         $attributes = $this->validatedAttributes($request, $project, $recurrence);
         $tagIds = $this->validatedTagIds($request, $project, $recurrence);
+        $customValues = $customFields->validate($request, $project, $attributes['type']);
 
-        DB::transaction(function () use ($request, $project, $recurrence, $attributes, $tagIds, $audit): void {
+        DB::transaction(function () use ($request, $project, $recurrence, $attributes, $tagIds, $customValues, $audit, $customFields): void {
             $before = $recurrence->auditSnapshot();
             $recurrence->update([...$attributes, 'updated_by_user_id' => $request->user()->id]);
             $recurrence->tags()->sync($tagIds);
+            $customFields->sync($recurrence, $customValues);
             $audit->handle($project, $request->user(), 'recurrence', $recurrence->id, 'updated', $before, $recurrence->fresh()->auditSnapshot());
         });
         $generate->handle();
@@ -304,6 +309,8 @@ class RecurrenceController extends Controller
             'members' => $project->activeMembers()->orderBy('name')->get(),
             'goals' => $project->savingsGoals()->with('account')->whereNull('archived_at')->orderBy('name')->get(),
             'tags' => $project->tags()->where(fn ($query) => $query->whereNull('archived_at')->when($recurrence !== null, fn ($tags) => $tags->orWhereHas('recurrenceTemplates', fn ($templates) => $templates->whereKey($recurrence->id))))->orderBy('name')->get(),
+            'customFieldDefinitions' => app(CustomFieldValues::class)->definitionsForForm($project, $recurrence),
+            'customFieldValues' => $recurrence?->customFieldValues()->with('definition')->get() ?? collect(),
             'today' => CarbonImmutable::now('Europe/Madrid')->toDateString(),
         ];
     }

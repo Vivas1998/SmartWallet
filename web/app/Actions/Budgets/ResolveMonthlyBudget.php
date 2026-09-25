@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\Budgets;
 
+use App\Models\BudgetTemplate;
 use App\Models\MonthlyBudget;
 use App\Models\MonthlyBudgetLimit;
 use App\Models\Project;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ResolveMonthlyBudget
@@ -25,13 +27,13 @@ class ResolveMonthlyBudget
         }
 
         $template = $project->budgetTemplates()
-            ->with('limits')
+            ->with('limits.category.parent')
             ->whereDate('effective_from_month', '<=', $monthDate)
             ->latest('effective_from_month')
             ->first();
 
         $previous = $template === null
-            ? $project->monthlyBudgets()->with('limits')->whereDate('month', '<', $monthDate)->latest('month')->first()
+            ? $project->monthlyBudgets()->with('limits.category.parent')->whereDate('month', '<', $monthDate)->latest('month')->first()
             : null;
 
         $source = $template ?? $previous;
@@ -41,7 +43,7 @@ class ResolveMonthlyBudget
             'total_limit_cents' => $source?->total_limit_cents ?? 0,
             'source_template_id' => $template?->id,
         ]);
-        $budget->setRelation('limits', ($source?->limits ?? collect())->map(
+        $budget->setRelation('limits', $this->copyableLimits($source)->map(
             fn ($limit): MonthlyBudgetLimit => new MonthlyBudgetLimit([
                 'category_id' => $limit->category_id,
                 'limit_cents' => $limit->limit_cents,
@@ -66,13 +68,13 @@ class ResolveMonthlyBudget
             }
 
             $template = $project->budgetTemplates()
-                ->with('limits')
+                ->with('limits.category.parent')
                 ->whereDate('effective_from_month', '<=', $monthDate)
                 ->latest('effective_from_month')
                 ->first();
 
             $previous = $template === null
-                ? $project->monthlyBudgets()->with('limits')->whereDate('month', '<', $monthDate)->latest('month')->first()
+                ? $project->monthlyBudgets()->with('limits.category.parent')->whereDate('month', '<', $monthDate)->latest('month')->first()
                 : null;
 
             $budget = $project->monthlyBudgets()->create([
@@ -81,7 +83,7 @@ class ResolveMonthlyBudget
                 'source_template_id' => $template?->id,
             ]);
 
-            foreach (($template?->limits ?? $previous?->limits ?? collect()) as $limit) {
+            foreach ($this->copyableLimits($template ?? $previous) as $limit) {
                 $budget->limits()->create([
                     'category_id' => $limit->category_id,
                     'limit_cents' => $limit->limit_cents,
@@ -89,6 +91,17 @@ class ResolveMonthlyBudget
             }
 
             return $budget->load('limits');
+        });
+    }
+
+    private function copyableLimits(BudgetTemplate|MonthlyBudget|null $source): Collection
+    {
+        return ($source?->limits ?? collect())->filter(function ($limit): bool {
+            $category = $limit->category;
+
+            return $category !== null
+                && ! $category->isArchived()
+                && ($category->isMain() || ! $category->parent?->isArchived());
         });
     }
 }

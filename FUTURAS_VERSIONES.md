@@ -24,17 +24,26 @@ El alcance y los criterios completos están en
 Esta mejora se publicó como `1.1.0` el 23 de septiembre de 2026. Se mantiene en
 este documento como historial; ya no forma parte de las funciones pendientes.
 
+## Versión 1.2.0 publicada — Interfaz y presupuestos
+
+- Tema oscuro completo.
+- Mostrar el presupuesto restante del mes actual de cada proyecto en
+  `Mis proyectos` mediante la tarjeta equilibrada aprobada, sin sumar ni mezclar
+  los importes.
+- Presupuestos y límites específicos para subcategorías.
+- Campos personalizados configurables por proyecto.
+
+Estos cuatro elementos se publicaron como `1.2.0` el 24 de septiembre de 2026
+tras superar la validación funcional, visual y de accesibilidad definida en
+[REQUISITOS_1_2.md](REQUISITOS_1_2.md). Se mantienen aquí como historial y ya no
+forman parte de las funciones pendientes.
+
 ## Mejoras candidatas sin versión asignada
 
-- Tema oscuro.
-- Mostrar el presupuesto restante de cada proyecto en `Mis proyectos`, sin sumar
-  ni mezclar los importes.
 - Avisos de facturas y vencimientos.
 - Importación CSV mediante plantilla propia y detección de duplicados.
 - Categorización automática siempre modificable.
 - División de gastos, cálculo de deudas y liquidaciones entre miembros.
-- Campos personalizados configurables por proyecto.
-- Presupuestos y límites específicos para subcategorías.
 - Módulo de inversiones con cuentas de inversión, aportaciones, valoración de
   cartera, rendimientos y separación entre capital aportado y valor actual.
 - Conexión y sincronización bancaria automática.
@@ -50,17 +59,23 @@ este documento como historial; ya no forma parte de las funciones pendientes.
 - Aprobación de gastos.
 - Funciones fiscales y gestión de suscripciones.
 
-## Seguridad condicionada al despliegue
+## Versión 2.0.0 planificada — Seguridad y despliegue
 
-- El doble factor se aplaza mientras la aplicación sea exclusivamente local, pero
-  deberá revisarse antes de cualquier publicación en Internet.
+- Despliegue de SmartWallet fuera del equipo local, inicialmente orientado al
+  homelab.
+- Incorporación obligatoria de HTTPS, gestión de secretos, copias cifradas,
+  restauración probada, monitorización y endurecimiento del servidor y del acceso
+  remoto.
+- Incorporación de doble factor antes de exponer datos financieros a través de
+  Internet.
 - La opción preferida será un código TOTP generado por una aplicación
   autenticadora o una alternativa resistente al phishing. Como opción secundaria
   podrá integrarse un proveedor externo para enviar códigos SMS, con teléfono
   verificado, límites de reintentos, códigos de un solo uso, caducidad breve y un
   método alternativo de recuperación.
-- El acceso remoto requerirá un hito independiente de HTTPS, gestión de secretos,
-  copias cifradas, restauración probada, monitorización y endurecimiento.
+
+`2.0.0` no forma parte del trabajo de `1.2.0`; se definirá después de estabilizar
+la siguiente versión local.
 
 ## Normas de esta lista
 
@@ -78,3 +93,5 @@ este documento como historial; ya no forma parte de las funciones pendientes.
 | 13-09-2026 | Añadida la autenticación multifactor futura con TOTP preferido y SMS opcional mediante proveedor externo. | Preparar la verificación de inicios de sesión sin añadir coste ni dependencias a la versión local. |
 | 22-09-2026 | Definido el calendario selectivo de 1.1, sus fuentes, estados, permisos y relación entre vencimiento y fecha efectiva. | Evitar saturar el calendario y separar previsión de contabilidad real. |
 | 23-09-2026 | Publicada la versión 1.1.0 con calendario selectivo, planificaciones puntuales y resumen real frente a estimado. | Cerrar el alcance aprobado y comenzar su validación mediante uso real. |
+| 23-09-2026 | Reservada la versión 1.2.0 para interfaz y presupuestos, y la versión 2.0.0 para despliegue y seguridad. | Concentrar la siguiente iteración en mejoras locales y separar el salto operativo del homelab. |
+| 24-09-2026 | Publicada la versión 1.2.0 con tema oscuro, tarjetas presupuestarias, límites por subcategoría y campos personalizados. | Cerrar el alcance local validado antes de definir el despliegue 2.0.0. |

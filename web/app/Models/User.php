@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ThemePreference;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,12 +12,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'email_normalized', 'password', 'last_login_at'])]
+#[Fillable(['name', 'email', 'email_normalized', 'password', 'last_login_at', 'theme_preference'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'theme_preference' => ThemePreference::Auto->value,
+    ];
 
     protected static function booted(): void
     {
@@ -36,6 +42,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'last_login_at' => 'datetime',
+            'theme_preference' => ThemePreference::class,
         ];
     }
 

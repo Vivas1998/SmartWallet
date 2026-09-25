@@ -6,10 +6,12 @@ namespace App\Models;
 
 use App\Enums\MovementType;
 use App\Enums\PlannedMovementStatus;
+use App\Support\CustomFieldValues;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'project_id', 'type', 'amount_cents', 'due_on', 'concept', 'category_id', 'subcategory_id',
@@ -90,6 +92,11 @@ class PlannedMovement extends Model
         return $this->belongsToMany(Tag::class)->withTimestamps();
     }
 
+    public function customFieldValues(): HasMany
+    {
+        return $this->hasMany(CustomFieldValue::class);
+    }
+
     public function formattedAmount(): string
     {
         return number_format($this->amount_cents / 100, 2, ',', '.').' €';
@@ -115,6 +122,7 @@ class PlannedMovement extends Model
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
             'cancelled_by_user_id' => $this->cancelled_by_user_id,
             'tag_ids' => $this->tags()->orderBy('tags.id')->pluck('tags.id')->all(),
+            'custom_fields' => app(CustomFieldValues::class)->snapshot($this),
             'notes' => $this->notes,
         ];
     }

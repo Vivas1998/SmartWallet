@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\FinancialAccountController;
 use App\Http\Controllers\MonthlyClosureController;
 use App\Http\Controllers\MovementController;
@@ -48,6 +49,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/', [ProjectController::class, 'index'])->name('dashboard');
     Route::get('/perfil', [ProfileController::class, 'show'])->name('profile.show');
     Route::patch('/perfil/nombre', [ProfileController::class, 'updateName'])->name('profile.name.update');
+    Route::patch('/perfil/apariencia', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
     Route::patch('/perfil/correo', [ProfileController::class, 'updateEmail'])->name('profile.email.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::delete('/perfil/sesiones', [ProfileController::class, 'destroyOtherSessions'])->name('profile.sessions.destroy-others');
@@ -195,6 +197,20 @@ Route::middleware('auth')->group(function (): void {
         ->name('tags.restore');
     Route::post('/proyectos/{project}/etiquetas/{tag}/fusionar', [TagController::class, 'merge'])
         ->name('tags.merge');
+    Route::get('/proyectos/{project}/campos-personalizados', [CustomFieldController::class, 'index'])
+        ->name('custom-fields.index');
+    Route::post('/proyectos/{project}/campos-personalizados', [CustomFieldController::class, 'store'])
+        ->name('custom-fields.store');
+    Route::patch('/proyectos/{project}/campos-personalizados/{customField}', [CustomFieldController::class, 'update'])
+        ->name('custom-fields.update');
+    Route::post('/proyectos/{project}/campos-personalizados/{customField}/archivar', [CustomFieldController::class, 'archive'])
+        ->name('custom-fields.archive');
+    Route::post('/proyectos/{project}/campos-personalizados/{customField}/restaurar', [CustomFieldController::class, 'restore'])
+        ->name('custom-fields.restore');
+    Route::post('/proyectos/{project}/campos-personalizados/{customField}/mover', [CustomFieldController::class, 'move'])
+        ->name('custom-fields.move');
+    Route::delete('/proyectos/{project}/campos-personalizados/{customField}', [CustomFieldController::class, 'destroy'])
+        ->name('custom-fields.destroy');
     Route::get('/proyectos/{project}/auditoria', [AuditLogController::class, 'index'])
         ->name('audit-logs.index');
     Route::post('/salir', [LoginController::class, 'destroy'])->name('logout');

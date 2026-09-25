@@ -69,6 +69,7 @@ class AuditLog extends Model
             'recurrence' => 'Serie recurrente',
             'planned_movement' => 'Planificación',
             'tag' => 'Etiqueta',
+            'custom_field' => 'Campo personalizado',
             'member' => 'Miembro',
             default => ucfirst(str_replace('_', ' ', $this->subject_type)),
         };
@@ -85,6 +86,7 @@ class AuditLog extends Model
             'recurrence' => 'una serie recurrente',
             'planned_movement' => 'una planificación',
             'tag' => 'una etiqueta',
+            'custom_field' => 'un campo personalizado',
             'member' => 'un miembro',
             default => 'un elemento',
         };

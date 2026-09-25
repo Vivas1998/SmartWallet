@@ -17,6 +17,7 @@ use App\Models\PlannedMovement;
 use App\Models\Project;
 use App\Models\SavingsGoal;
 use App\Models\User;
+use App\Support\CustomFieldValues;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -51,13 +52,14 @@ class PlannedMovementController extends Controller
         return view('planned-movements.form', $this->formData($project));
     }
 
-    public function store(Request $request, Project $project, RecordProjectAudit $audit): RedirectResponse
+    public function store(Request $request, Project $project, RecordProjectAudit $audit, CustomFieldValues $customFields): RedirectResponse
     {
         $this->authorize('managePlannedMovements', $project);
         $attributes = $this->validatedPlanAttributes($request, $project);
         $tagIds = $this->validatedTagIds($request, $project);
+        $customValues = $customFields->validate($request, $project, $attributes['type']);
 
-        DB::transaction(function () use ($request, $project, $attributes, $tagIds, $audit): void {
+        DB::transaction(function () use ($request, $project, $attributes, $tagIds, $customValues, $audit, $customFields): void {
             $plan = PlannedMovement::create([
                 'project_id' => $project->id,
                 ...$attributes,
@@ -66,6 +68,7 @@ class PlannedMovementController extends Controller
                 'updated_by_user_id' => $request->user()->id,
             ]);
             $plan->tags()->sync($tagIds);
+            $customFields->sync($plan, $customValues);
             $audit->handle($project, $request->user(), 'planned_movement', $plan->id, 'created', null, $plan->auditSnapshot());
         });
 
@@ -88,19 +91,22 @@ class PlannedMovementController extends Controller
         Project $project,
         PlannedMovement $plannedMovement,
         RecordProjectAudit $audit,
+        CustomFieldValues $customFields,
     ): RedirectResponse {
         $this->authorize('managePlannedMovements', $project);
         $this->ensurePlan($project, $plannedMovement);
         $this->ensurePending($plannedMovement);
         $attributes = $this->validatedPlanAttributes($request, $project, $plannedMovement);
         $tagIds = $this->validatedTagIds($request, $project, $plannedMovement);
+        $customValues = $customFields->validate($request, $project, $attributes['type']);
 
-        DB::transaction(function () use ($request, $project, $plannedMovement, $attributes, $tagIds, $audit): void {
+        DB::transaction(function () use ($request, $project, $plannedMovement, $attributes, $tagIds, $customValues, $audit, $customFields): void {
             $plan = PlannedMovement::query()->with('tags')->lockForUpdate()->findOrFail($plannedMovement->id);
             $this->ensurePending($plan);
             $before = $plan->auditSnapshot();
             $plan->update([...$attributes, 'updated_by_user_id' => $request->user()->id]);
             $plan->tags()->sync($tagIds);
+            $customFields->sync($plan, $customValues);
             $audit->handle($project, $request->user(), 'planned_movement', $plan->id, 'updated', $before, $plan->fresh()->auditSnapshot());
         }, 3);
 
@@ -155,12 +161,14 @@ class PlannedMovementController extends Controller
         Project $project,
         PlannedMovement $plannedMovement,
         CompletePlannedMovement $complete,
+        CustomFieldValues $customFields,
     ): RedirectResponse {
         $this->authorize('managePlannedMovements', $project);
         $this->ensurePlan($project, $plannedMovement);
         $this->ensurePending($plannedMovement);
         [$attributes, $category, $subcategory, $goal] = $this->validatedCompletion($request, $project, $plannedMovement);
         $tagIds = $this->validatedTagIds($request, $project, $plannedMovement);
+        $customValues = $customFields->validate($request, $project, $attributes['type']);
 
         if ($category !== null) {
             $duplicate = $this->possibleDuplicate(
@@ -175,7 +183,7 @@ class PlannedMovementController extends Controller
             }
         }
 
-        $movement = $complete->handle($plannedMovement, $request->user(), $attributes, $tagIds, $goal);
+        $movement = $complete->handle($plannedMovement, $request->user(), $attributes, $tagIds, $goal, $customValues);
 
         return redirect()->route('planned-movements.index', $project)
             ->with('status', 'Planificación registrada como realizada el '.$movement->occurred_on->format('d/m/Y').'. Saldos y presupuesto actualizados.');
@@ -482,6 +490,8 @@ class PlannedMovementController extends Controller
                 ->where(fn ($query) => $query->whereNull('archived_at')->when($current?->savings_goal_id, fn ($q, $id) => $q->orWhereKey($id)))
                 ->orderBy('name')->get(),
             'tags' => $project->tags()->where(fn ($query) => $query->whereNull('archived_at')->when($current !== null, fn ($tags) => $tags->orWhereHas('plannedMovements', fn ($plans) => $plans->whereKey($current->id))))->orderBy('name')->get(),
+            'customFieldDefinitions' => app(CustomFieldValues::class)->definitionsForForm($project, $current),
+            'customFieldValues' => $current?->customFieldValues()->with('definition')->get() ?? collect(),
             'today' => CarbonImmutable::now('Europe/Madrid')->toDateString(),
         ];
     }

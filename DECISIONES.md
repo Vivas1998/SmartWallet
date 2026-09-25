@@ -693,3 +693,67 @@ No quedan decisiones de marca pendientes para la versión 1.0.
   como `1.1.1`, conservando `1.1.0` como la entrega del calendario.
 - **Motivo:** diferenciar claramente una ampliación funcional de un ajuste de
   distribución o mantenimiento perteneciente a la misma línea de versión.
+
+## REL-006 — Alcance previsto de 1.2.0 y reserva de 2.0.0
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada en `1.2.0`.
+- **Decisión:** dedicar `1.2.0` al tema oscuro, el presupuesto restante por
+  proyecto en `Mis proyectos`, los límites por subcategoría y los campos
+  personalizados. Reservar `2.0.0` para el despliegue fuera del equipo local y
+  su seguridad asociada, incluido doble factor, HTTPS, secretos, copias,
+  restauración, monitorización y endurecimiento.
+- **Motivo:** completar primero la experiencia y el detalle presupuestario de la
+  aplicación local, manteniendo el cambio operativo y de seguridad como un hito
+  mayor independiente.
+
+## UX-015 — Tema y tarjeta de proyecto para 1.2.0
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada en `1.2.0`.
+- **Decisión:** ofrecer los modos automático, claro y oscuro con preferencia por
+  usuario, aplicarlos a toda la interfaz y mantener contraste AA. En `Mis
+  proyectos` se utilizará la tarjeta equilibrada: disponible del mes destacado,
+  barra de progreso y una línea secundaria con gasto, presupuesto y porcentaje.
+- **Decisión complementaria:** conservar los umbrales del 80 % y 100 %, no
+  mezclar proyectos, mostrar la ausencia de presupuesto y evitar crear meses al
+  consultar proyectos archivados.
+- **Motivo:** permitir una lectura financiera rápida sin saturar la selección de
+  proyectos y ofrecer una apariencia coherente con el dispositivo y la
+  preferencia personal.
+
+## BUD-001 — Presupuestos jerárquicos para 1.2.0
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada en `1.2.0`.
+- **Decisión:** permitir límites opcionales en subcategorías de gasto. Su consumo
+  se reflejará también en la categoría principal; las devoluciones reducirán
+  ambos niveles y los movimientos sin subcategoría solo consumirán el nivel
+  principal.
+- **Decisión complementaria:** la suma de límites secundarios no superará el
+  límite principal, aunque podrá dejar parte sin asignar. Se conservarán los
+  umbrales del 80 % y 100 %, la copia mensual, los dos alcances de edición, la
+  auditoría y la administración exclusiva por propietarios.
+- **Decisión complementaria:** la interfaz utilizará subcategorías desplegables y
+  conservará en solo lectura los datos históricos de elementos archivados.
+- **Motivo:** aumentar el detalle presupuestario sin duplicar gasto, generar
+  límites contradictorios ni perder la lectura global de cada categoría.
+
+## DAT-007 — Campos personalizados por proyecto para 1.2.0
+
+- **Fecha:** 23 de septiembre de 2026.
+- **Estado:** aceptada e implementada en `1.2.0`.
+- **Decisión:** permitir hasta diez campos activos por proyecto de texto corto,
+  número decimal, fecha o sí/no. Solo los propietarios administrarán las
+  definiciones y los miembros podrán rellenar valores en movimientos,
+  planificaciones y recurrencias según sus tipos aplicables.
+- **Decisión complementaria:** los campos usados se archivarán para conservar el
+  historial; los nunca utilizados podrán eliminarse definitivamente. Se
+  integrarán en filtros, CSV y auditoría, sin alterar la detección de duplicados
+  ni agregar automáticamente números en informes.
+- **Decisión complementaria:** todos los proyectos recibirán vacíos los ejemplos
+  `Número de factura`, `Fecha de garantía`, `Gasto deducible`, `Método de compra`
+  y `Cubierto por el seguro`, aplicables a gastos y eliminables mientras no se
+  utilicen.
+- **Motivo:** ofrecer flexibilidad por proyecto y ejemplos comprensibles sin
+  imponer datos, columnas físicas ni pérdida de información histórica.

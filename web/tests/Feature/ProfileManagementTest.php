@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\ThemePreference;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,34 @@ class ProfileManagementTest extends TestCase
         ])->assertRedirect(route('profile.show'));
 
         $this->assertSame('Pablo García', $user->fresh()->name);
+    }
+
+    public function test_a_user_can_choose_a_theme_preference(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->patch(route('profile.theme.update'), [
+            'theme_preference' => ThemePreference::Dark->value,
+        ])->assertRedirect()->assertSessionHas('status', 'Apariencia actualizada.');
+
+        $this->assertSame(ThemePreference::Dark, $user->fresh()->theme_preference);
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-theme="dark"', false)
+            ->assertSee('id="header-theme-preference"', false);
+
+        $this->actingAs($user)->from(route('profile.show'))->patch(route('profile.theme.update'), [
+            'theme_preference' => 'sepia',
+        ])->assertRedirect(route('profile.show'))->assertSessionHasErrors('theme_preference');
+
+        $this->assertSame(ThemePreference::Dark, $user->fresh()->theme_preference);
+    }
+
+    public function test_guest_pages_follow_the_device_theme(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('data-theme="auto"', false);
     }
 
     public function test_changing_email_requires_the_current_password_and_a_unique_normalized_address(): void

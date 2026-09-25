@@ -72,6 +72,11 @@
         @if(request()->routeIs('tags.*')) aria-current="page" @endif
     >Etiquetas</a>
     <a
+        class="project-nav__link {{ request()->routeIs('custom-fields.*') ? 'project-nav__link--active' : '' }}"
+        href="{{ route('custom-fields.index', $project) }}"
+        @if(request()->routeIs('custom-fields.*')) aria-current="page" @endif
+    >Campos</a>
+    <a
         class="project-nav__link {{ request()->routeIs('project-members.*') ? 'project-nav__link--active' : '' }}"
         href="{{ route('project-members.index', $project) }}"
         @if(request()->routeIs('project-members.*')) aria-current="page" @endif

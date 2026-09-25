@@ -77,6 +77,11 @@ class ProjectPolicy
         return $this->isOwner($user, $project) && ! $project->isArchived();
     }
 
+    public function manageCustomFields(User $user, Project $project): bool
+    {
+        return $this->isOwner($user, $project) && ! $project->isArchived();
+    }
+
     public function exportTrash(User $user, Project $project): bool
     {
         return $this->isOwner($user, $project);

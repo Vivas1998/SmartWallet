@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\MovementType;
+use App\Support\CustomFieldValues;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -118,6 +119,11 @@ class Movement extends Model
         return $this->hasMany(AccountEntry::class);
     }
 
+    public function customFieldValues(): HasMany
+    {
+        return $this->hasMany(CustomFieldValue::class);
+    }
+
     public function formattedAmount(): string
     {
         return number_format($this->amount_cents / 100, 2, ',', '.').' €';
@@ -145,6 +151,7 @@ class Movement extends Model
             'goal_direction' => $this->goalAllocation?->direction->value,
             'leftover_budget_month' => $this->leftoverAllocation?->budget_month->toDateString(),
             'tag_ids' => $this->tags()->orderBy('tags.id')->pluck('tags.id')->all(),
+            'custom_fields' => app(CustomFieldValues::class)->snapshot($this),
             'notes' => $this->notes,
             'trashed_at' => $this->trashed_at?->toIso8601String(),
             'purge_at' => $this->purge_at?->toIso8601String(),

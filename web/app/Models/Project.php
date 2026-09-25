@@ -130,6 +130,11 @@ class Project extends Model
         return $this->hasMany(Tag::class);
     }
 
+    public function customFieldDefinitions(): HasMany
+    {
+        return $this->hasMany(CustomFieldDefinition::class);
+    }
+
     public function isArchived(): bool
     {
         return $this->archived_at !== null;

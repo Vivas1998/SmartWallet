@@ -1,7 +1,7 @@
 -- SmartWallet: estructura limpia de base de datos
 -- Motor objetivo: MySQL 8.4 LTS
--- Generado el 23 de septiembre de 2026 desde 17 migraciones Laravel.
--- Compatible con SmartWallet 1.1.1.
+-- Generado el 24 de septiembre de 2026 desde 19 migraciones Laravel.
+-- Compatible con el desarrollo actual de SmartWallet 1.2.0.
 -- No contiene seeders, usuarios de ejemplo ni datos de negocio.
 -- Los únicos INSERT registran el historial técnico de migraciones aplicado.
 -- Es deliberadamente no destructivo: no contiene DROP TABLE.
@@ -126,6 +126,60 @@ CREATE TABLE `categories` (
   CONSTRAINT `categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `categories_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
   CONSTRAINT `categories_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `custom_field_definitions` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `project_id` bigint unsigned NOT NULL,
+  `name` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name_normalized` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` enum('text','number','date','boolean') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `applicable_movement_types` json NOT NULL,
+  `position` smallint unsigned NOT NULL DEFAULT '0',
+  `is_initial` tinyint(1) NOT NULL DEFAULT '0',
+  `archived_at` timestamp NULL DEFAULT NULL,
+  `archived_by_user_id` bigint unsigned DEFAULT NULL,
+  `created_by_user_id` bigint unsigned NOT NULL,
+  `updated_by_user_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `custom_field_definitions_project_id_name_normalized_unique` (`project_id`,`name_normalized`),
+  KEY `custom_field_definitions_archived_by_user_id_foreign` (`archived_by_user_id`),
+  KEY `custom_field_definitions_created_by_user_id_foreign` (`created_by_user_id`),
+  KEY `custom_field_definitions_updated_by_user_id_foreign` (`updated_by_user_id`),
+  KEY `custom_field_definitions_listing` (`project_id`,`archived_at`,`position`),
+  CONSTRAINT `custom_field_definitions_archived_by_user_id_foreign` FOREIGN KEY (`archived_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `custom_field_definitions_created_by_user_id_foreign` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `custom_field_definitions_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `custom_field_definitions_updated_by_user_id_foreign` FOREIGN KEY (`updated_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `custom_field_values` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `custom_field_definition_id` bigint unsigned NOT NULL,
+  `movement_id` bigint unsigned DEFAULT NULL,
+  `planned_movement_id` bigint unsigned DEFAULT NULL,
+  `recurrence_template_id` bigint unsigned DEFAULT NULL,
+  `value_text` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `value_number` decimal(20,6) DEFAULT NULL,
+  `value_date` date DEFAULT NULL,
+  `value_boolean` tinyint(1) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `custom_field_values_movement_unique` (`custom_field_definition_id`,`movement_id`),
+  UNIQUE KEY `custom_field_values_plan_unique` (`custom_field_definition_id`,`planned_movement_id`),
+  UNIQUE KEY `custom_field_values_recurrence_unique` (`custom_field_definition_id`,`recurrence_template_id`),
+  KEY `custom_field_values_movement_id_foreign` (`movement_id`),
+  KEY `custom_field_values_planned_movement_id_foreign` (`planned_movement_id`),
+  KEY `custom_field_values_recurrence_template_id_foreign` (`recurrence_template_id`),
+  KEY `custom_field_values_text_lookup` (`custom_field_definition_id`,`value_text`),
+  KEY `custom_field_values_number_lookup` (`custom_field_definition_id`,`value_number`),
+  KEY `custom_field_values_date_lookup` (`custom_field_definition_id`,`value_date`),
+  KEY `custom_field_values_boolean_lookup` (`custom_field_definition_id`,`value_boolean`),
+  CONSTRAINT `custom_field_values_custom_field_definition_id_foreign` FOREIGN KEY (`custom_field_definition_id`) REFERENCES `custom_field_definitions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `custom_field_values_movement_id_foreign` FOREIGN KEY (`movement_id`) REFERENCES `movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `custom_field_values_planned_movement_id_foreign` FOREIGN KEY (`planned_movement_id`) REFERENCES `planned_movements` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `custom_field_values_recurrence_template_id_foreign` FOREIGN KEY (`recurrence_template_id`) REFERENCES `recurrence_templates` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE `failed_jobs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -573,6 +627,7 @@ CREATE TABLE `users` (
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `remember_token` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `last_login_at` timestamp NULL DEFAULT NULL,
+  `theme_preference` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'auto',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -597,6 +652,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
   ('2026_09_15_001000_create_monthly_leftover_allocations_table', 1),
   ('2026_09_16_000100_add_scale_indexes_to_movements', 1),
   ('2026_09_16_000200_improve_accessible_category_color', 1),
-  ('2026_09_23_000100_create_calendar_foundations', 1);
+  ('2026_09_23_000100_create_calendar_foundations', 1),
+  ('2026_09_23_000200_add_theme_preference_to_users_table', 1),
+  ('2026_09_24_000100_create_custom_fields_tables', 1);
 
 SET FOREIGN_KEY_CHECKS = 1;

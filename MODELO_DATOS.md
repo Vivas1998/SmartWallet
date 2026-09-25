@@ -1,8 +1,8 @@
 # Modelo de datos de SmartWallet
 
-Estado: aprobado como base para crear las migraciones.
+Estado: implementado y actualizado para SmartWallet 1.2.0.
 
-Última actualización: 14 de septiembre de 2026.
+Última actualización: 24 de septiembre de 2026.
 
 ## 1. Objetivo y principios
 
@@ -33,6 +33,8 @@ Se aplicarán estos principios:
 | Finanzas | `account_entries` | Efecto exacto del movimiento sobre cada cuenta. |
 | Clasificación | `categories` | Categorías principales y subcategorías. |
 | Clasificación | `tags`, `movement_tag` y `recurrence_template_tag` | Varias etiquetas por movimiento y serie recurrente. |
+| Información adicional | `custom_field_definitions` | Campos configurables y aislados por proyecto. |
+| Información adicional | `custom_field_values` | Valores tipados para movimientos, planes y recurrencias. |
 | Presupuesto | `budget_templates` | Presupuesto habitual vigente desde un mes. |
 | Presupuesto | `budget_template_limits` | Límites habituales por categoría principal. |
 | Presupuesto | `monthly_budgets` | Copia editable de un mes concreto. |
@@ -119,13 +121,29 @@ repetir una misma etiqueta en un movimiento o serie recurrente. Una etiqueta
 archivada conserva sus relaciones históricas y una fusión las traslada a la
 etiqueta de destino sin duplicarlas.
 
+### 5.1. Campos personalizados
+
+`custom_field_definitions` mantiene hasta diez campos activos por proyecto, con
+nombre, orden, tipo (`text`, `number`, `date` o `boolean`), tipos de movimiento
+aplicables y estado de archivado. Los cinco ejemplos iniciales se crean vacíos y
+solo para gastos.
+
+`custom_field_values` guarda cada dato en una columna tipada y lo vincula a un
+movimiento, una planificación puntual o una plantilla recurrente. Completar una
+planificación o generar una recurrencia copia sus valores al movimiento real.
+Archivar una definición impide usarla en operaciones nuevas, pero conserva su
+historial, filtros, exportación y auditoría. La función no añade columnas a
+`movements` y tampoco interviene en la detección de duplicados.
+
 ## 6. Presupuestos mensuales
 
 `budget_templates` y `budget_template_limits` conservan cada versión del
 presupuesto habitual y su primer mes de vigencia.
 
 `monthly_budgets` contiene una única copia por proyecto y mes. Sus límites de
-categorías principales se guardan en `monthly_budget_limits`.
+categorías principales y subcategorías se guardan en `monthly_budget_limits`.
+La suma de límites secundarios no puede superar el límite de su categoría
+principal; un gasto con subcategoría consume ambos niveles.
 
 - «Solo este mes» modifica únicamente la copia mensual.
 - «Este mes y los siguientes» crea una nueva plantilla vigente desde ese mes.

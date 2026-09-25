@@ -70,45 +70,29 @@
                 </div>
             </section>
 
-            <section aria-labelledby="category-limits-title">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">Distribución opcional</p>
-                        <h2 class="section-heading__title" id="category-limits-title">Límites por categoría principal</h2>
-                    </div>
-                </div>
-                <div class="budget-category-list">
-                    @foreach ($categories as $category)
-                        @php
-                            $limitCents = (int) ($limits->get($category->id)?->limit_cents ?? 0);
-                            $categorySpent = (int) ($spentByCategory->get($category->id) ?? 0);
-                            $categoryProgress = $limitCents > 0 ? max(0, min(100, (int) round(($categorySpent / $limitCents) * 100))) : ($categorySpent > 0 ? 100 : 0);
-                        @endphp
-                        <article class="budget-category {{ $category->isArchived() ? 'budget-category--archived' : '' }}">
-                            <div class="budget-category__identity">
-                                <span class="category-item__icon" style="--category-color: {{ $category->color }}" aria-hidden="true">{{ $category->iconSymbol() }}</span>
-                                <div>
-                                    <h3 class="budget-category__name">{{ $category->name }}</h3>
-                                    <p class="budget-category__spent">Gastado: {{ $formatMoney($categorySpent) }}</p>
-                                </div>
-                            </div>
-                            @if ($category->isArchived())
-                                <div class="budget-category__archived-value"><span class="badge badge--archived">Archivada</span><strong>{{ $formatMoney($limitCents) }}</strong></div>
-                            @else
-                                <div class="field budget-category__field">
-                                    <label class="field__label" for="limit-{{ $category->id }}">Límite</label>
-                                    <div class="money-field">
-                                        <input class="field__control money-field__control" id="limit-{{ $category->id }}" name="limits[{{ $category->id }}]" inputmode="decimal" value="{{ old('limits.'.$category->id, $formatInput($limitCents)) }}">
-                                        <span class="money-field__suffix">€</span>
-                                    </div>
-                                </div>
-                            @endif
-                            <div class="progress-bar" role="progressbar" aria-label="Presupuesto consumido en {{ $category->name }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $categoryProgress }}"><span class="progress-bar__value {{ $categoryProgress >= 100 ? 'progress-bar__value--danger' : ($categoryProgress >= 80 ? 'progress-bar__value--warning' : '') }}" style="width: {{ $categoryProgress }}%"></span></div>
-                        </article>
-                    @endforeach
-                </div>
-            </section>
+    @endif
 
+    <section aria-labelledby="category-limits-title">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Distribución opcional</p>
+                <h2 class="section-heading__title" id="category-limits-title">Límites por categoría y subcategoría</h2>
+                <p class="section-heading__intro">Las subcategorías reparten el límite principal sin aumentar el presupuesto del mes.</p>
+            </div>
+        </div>
+        <div class="budget-category-list">
+            @forelse ($categories as $category)
+                @include('budgets._category')
+            @empty
+                <div class="empty-state">
+                    <h3 class="empty-state__title">Todavía no hay categorías de gasto</h3>
+                    <p class="empty-state__copy">Crea una categoría principal para poder distribuir el presupuesto.</p>
+                </div>
+            @endforelse
+        </div>
+    </section>
+
+    @if ($canManage)
             <fieldset class="budget-scope">
                 <legend class="budget-scope__legend">Aplicar el cambio</legend>
                 <label class="choice-card">
@@ -117,25 +101,12 @@
                 </label>
                 <label class="choice-card">
                     <input type="radio" name="scope" value="future" @checked(old('scope', 'future') === 'future')>
-                    <span><strong>Este mes y próximos</strong><small>Será la base habitual al abrir meses nuevos.</small></span>
+                    <span><strong>Este mes y próximos</strong><small>Copiará también los límites de subcategorías al abrir meses nuevos.</small></span>
                 </label>
             </fieldset>
 
             <div class="form-actions"><button class="button button--primary" type="submit">Guardar presupuesto</button></div>
         </form>
-    @else
-        <section aria-labelledby="category-limits-title">
-            <div class="section-heading"><div><p class="eyebrow">Distribución</p><h2 class="section-heading__title" id="category-limits-title">Límites por categoría</h2></div></div>
-            <div class="budget-category-list">
-                @foreach ($categories as $category)
-                    @php($limitCents = (int) ($limits->get($category->id)?->limit_cents ?? 0))
-                    @php($categorySpent = (int) ($spentByCategory->get($category->id) ?? 0))
-                    <article class="budget-category">
-                        <div class="budget-category__identity"><span class="category-item__icon" style="--category-color: {{ $category->color }}" aria-hidden="true">{{ $category->iconSymbol() }}</span><div><h3 class="budget-category__name">{{ $category->name }}</h3><p class="budget-category__spent">{{ $formatMoney($categorySpent) }} gastados de {{ $formatMoney($limitCents) }}</p></div></div>
-                    </article>
-                @endforeach
-            </div>
-        </section>
     @endif
 
     <section class="closure-callout" aria-labelledby="closure-callout-title">

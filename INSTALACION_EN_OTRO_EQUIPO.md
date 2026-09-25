@@ -2,7 +2,7 @@
 
 Revisión: 19 de septiembre de 2026.
 
-Esta guía describe la instalación local de SmartWallet 1.1 en otro equipo con
+Esta guía describe la instalación local de SmartWallet 1.2 en otro equipo con
 Windows 11. Cubre dos casos distintos:
 
 1. **Instalación nueva:** código limpio, base de datos vacía y una clave nueva.
@@ -246,7 +246,7 @@ ahora, antes del primer `start.ps1`:
 ```
 
 El comando solo acepta una base `smartwallet` sin tablas, importa el esquema
-completo de la versión 1.1.1 y comprueba que estén registradas sus 17
+completo del desarrollo actual y comprueba que estén registradas sus 19
 migraciones. No crea usuarios, proyectos ni movimientos. Si la base contiene
 alguna tabla, se detiene sin modificarla.
 

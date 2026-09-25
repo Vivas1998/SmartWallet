@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $ddlPath = Join-Path $projectRoot 'web\database\ddl\smartwallet.mysql.sql'
 $rootPassword = 'smartwallet_root_dev'
-$expectedMigrations = 17
+$expectedMigrations = 19
 $previousLocation = Get-Location
 
 try {

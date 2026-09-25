@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\CustomFields\ApplyCustomFieldFilters;
 use App\Enums\MovementType;
 use App\Models\Movement;
 use App\Models\Project;
@@ -16,7 +17,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MovementExportController extends Controller
 {
-    public function export(Request $request, Project $project): StreamedResponse
+    public function export(Request $request, Project $project, ApplyCustomFieldFilters $customFieldFilters): StreamedResponse
     {
         $this->authorize('view', $project);
         $validated = $request->validate([
@@ -30,6 +31,7 @@ class MovementExportController extends Controller
             'search' => ['nullable', 'string', 'max:180'],
             'from' => ['nullable', 'date', 'required_with:to'],
             'to' => ['nullable', 'date', 'required_with:from', 'after_or_equal:from'],
+            'custom_filters' => ['nullable', 'array'],
         ]);
 
         $query = $this->baseQuery($project)->whereNull('trashed_at');
@@ -40,6 +42,7 @@ class MovementExportController extends Controller
             $to = isset($validated['to']) ? CarbonImmutable::parse($validated['to'], 'Europe/Madrid') : $month->endOfMonth();
             $query->whereBetween('occurred_on', [$from->toDateString(), $to->toDateString()]);
             $this->applyFilters($query, $validated);
+            $customFieldFilters->handle($request, $project, $query);
             $suffix = isset($validated['from']) ? $from->format('Y-m-d').'-'.$to->format('Y-m-d').'-filtrado' : $month->format('Y-m').'-filtrado';
         }
 
@@ -61,7 +64,7 @@ class MovementExportController extends Controller
     private function baseQuery(Project $project): Builder
     {
         return Movement::query()->where('project_id', $project->id)->with([
-            'account', 'destinationAccount', 'paidBy', 'category', 'subcategory', 'tags',
+            'account', 'destinationAccount', 'paidBy', 'category', 'subcategory', 'tags', 'customFieldValues.definition',
         ]);
     }
 
@@ -82,21 +85,26 @@ class MovementExportController extends Controller
     private function download(Builder $query, Project $project, string $suffix, bool $trash): StreamedResponse
     {
         $filename = 'smartwallet-'.Str::slug($project->name).'-movimientos-'.$suffix.'.csv';
+        $customFieldDefinitions = $project->customFieldDefinitions()->orderBy('position')->orderBy('name')->get();
 
-        return response()->streamDownload(function () use ($query, $project, $trash): void {
+        return response()->streamDownload(function () use ($query, $project, $trash, $customFieldDefinitions): void {
             $output = fopen('php://output', 'wb');
             if ($output === false) {
                 return;
             }
             fwrite($output, "\xEF\xBB\xBF");
             $headers = ['Proyecto', 'Tipo', 'Cuenta de origen', 'Cuenta de destino', 'Pagado o recibido por', 'Concepto', 'Importe', 'Fecha', 'Categoría', 'Subcategoría', 'Etiquetas', 'Notas'];
+            foreach ($customFieldDefinitions as $definition) {
+                $headers[] = 'Campo: '.$definition->name;
+            }
             if ($trash) {
                 array_push($headers, 'Estado', 'Eliminación definitiva');
             }
             $this->putRow($output, $headers);
 
-            $query->orderBy('id')->chunkById(500, function ($movements) use ($output, $project, $trash): void {
+            $query->orderBy('id')->chunkById(500, function ($movements) use ($output, $project, $trash, $customFieldDefinitions): void {
                 foreach ($movements as $movement) {
+                    $customValues = $movement->customFieldValues->keyBy('custom_field_definition_id');
                     $row = [
                         $project->name,
                         $movement->type->label(),
@@ -111,6 +119,9 @@ class MovementExportController extends Controller
                         $movement->tags->sortBy('name')->pluck('name')->implode(', '),
                         $movement->notes ?? '',
                     ];
+                    foreach ($customFieldDefinitions as $definition) {
+                        $row[] = $customValues->get($definition->id)?->displayValue() ?? '';
+                    }
                     if ($trash) {
                         array_push($row, 'Papelera', $movement->purge_at?->timezone('Europe/Madrid')->format('d/m/Y H:i') ?? '');
                     }

@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\User;
 use App\Support\InitialCategoryCatalog;
+use App\Support\InitialCustomFieldCatalog;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ final class CreateProject
 {
     public function __construct(
         private readonly InitialCategoryCatalog $initialCategoryCatalog,
+        private readonly InitialCustomFieldCatalog $initialCustomFieldCatalog,
         private readonly RecordProjectAudit $audit,
     ) {}
 
@@ -73,6 +75,7 @@ final class CreateProject
             ]);
 
             $this->initialCategoryCatalog->createFor($project, $creator);
+            $this->initialCustomFieldCatalog->createFor($project, $creator);
 
             $budgetMonth = CarbonImmutable::now('Europe/Madrid')->startOfMonth()->toDateString();
             $budgetCents = Money::toCents($data['monthly_budget']);

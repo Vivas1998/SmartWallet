@@ -3,6 +3,50 @@
 Este documento sigue el formato de [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto utiliza [versionado semántico](https://semver.org/lang/es/).
 
+## [1.2.0] — 2026-09-24
+
+Segunda evolución funcional de SmartWallet, centrada en la lectura rápida del
+presupuesto, su desglose y la adaptación de cada proyecto.
+
+### Añadido
+
+- Temas `Automático`, `Claro` y `Oscuro`, con preferencia guardada por usuario y
+  aplicada a toda la interfaz.
+- Tarjeta equilibrada en `Mis proyectos` con presupuesto disponible, progreso,
+  gasto neto y porcentaje consumido del mes actual.
+- Límites opcionales por subcategoría, desglose desplegable e importe principal
+  todavía sin asignar.
+- Campos personalizados por proyecto de texto corto, número decimal, fecha o
+  sí/no, con un máximo de diez activos.
+- Cinco campos vacíos de ejemplo en cada proyecto: número de factura, fecha de
+  garantía, gasto deducible, método de compra y cobertura del seguro.
+- Valores personalizados en movimientos, planificaciones y recurrencias, además
+  de filtros específicos, exportación CSV y auditoría.
+
+### Cambiado
+
+- Los gastos con subcategoría consumen simultáneamente sus límites principal y
+  secundario; las devoluciones reducen ambos consumos.
+- La copia de presupuestos entre meses conserva también los límites secundarios,
+  respetando los alcances `Solo este mes` y `Este mes y próximos`.
+- Las categorías archivadas mantienen su lectura histórica sin admitir límites
+  nuevos.
+- La portada calcula los presupuestos de todos los proyectos mediante un número
+  fijo de consultas y nunca crea meses implícitamente al consultar archivos.
+- La DDL consolidada reproduce las 33 tablas y registra las 19 migraciones de la
+  instalación actual.
+
+### Validado
+
+- 124 pruebas automáticas y 985 aserciones superadas en `smartwallet_test`.
+- 148 archivos PHP aceptados por Laravel Pint y compilación Vite de producción
+  completada.
+- Composer Audit y npm Audit sin vulnerabilidades conocidas.
+- DDL y migraciones comparadas con tablas, columnas, índices y claves foráneas
+  equivalentes.
+- Temas e interfaces revisados en 1440, 720 y 360 px, con navegación por teclado,
+  foco visible, contraste AA y ausencia de desbordamiento global.
+
 ## [1.1.1] — 2026-09-23
 
 Entrega correctiva sin funciones nuevas, destinada a completar la distribución

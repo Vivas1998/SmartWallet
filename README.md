@@ -2,14 +2,18 @@
 
 **Nombre:** SmartWallet, definitivo
 **Año objetivo:** 2026; adelantado respecto a la planificación inicial de 2027
-**Versión:** 1.1.1
-**Estado:** versión 1.1.1 finalizada para uso local
+**Versión:** 1.2.0
+**Estado:** versión 1.2.0 publicada para uso local
 **Fecha de cierre de 1.1:** 23 de septiembre de 2026
+**Fecha de cierre de 1.2:** 24 de septiembre de 2026
 **Inicio de la preparación:** 13 de septiembre de 2026
 **Fecha máxima de la versión 1.0:** 31 de diciembre de 2026
 **Presupuesto de desarrollo:** 0 €
 
 ## Criterio de versionado
+
+SmartWallet sigue la [política común de control de versiones de las aplicaciones
+web](../../CONTROL_DE_VERSIONES.md).
 
 - `x.0.0`: versiones grandes, completas y estables.
 - `x.x.0`: mejoras funcionales sobre una versión estable.
@@ -57,8 +61,8 @@ personales y colaborar con otros miembros únicamente en los proyectos compartid
   y colores propios.
 - La información financiera personal tendrá protección reforzada.
 
-SmartWallet es el nombre definitivo. La base 1.0 y la ampliación de calendario
-de 1.1 están aprobadas e implementadas.
+SmartWallet es el nombre definitivo. La base 1.0, el calendario de 1.1 y las
+mejoras de interfaz y presupuestos de 1.2 están publicadas para uso local.
 
 ## Tecnologías confirmadas
 
@@ -90,7 +94,8 @@ estén preparados antes de dar el arranque por finalizado.
 
 Una instalación totalmente nueva también puede crear rápidamente la estructura
 mediante `.\scripts\init-database-from-ddl.ps1`. El DDL consolidado reproduce el
-esquema completo de 1.1.1 y se niega a ejecutarse sobre una base con tablas.
+esquema completo del desarrollo actual y se niega a ejecutarse sobre una base
+con tablas.
 
 La guía completa de primera instalación, persistencia, puertos y diagnóstico está
 en [Instalación local](INSTALACION_LOCAL.md). La preparación de Windows, traslado
@@ -104,9 +109,10 @@ modificar datos.
 
 ## Próximo hito
 
-Utilizar la versión 1.1 local y registrar mejoras surgidas del uso real. El
-despliegue en homelab, sus copias y su monitorización constituirán un hito
-posterior. SmartWallet es el nombre definitivo del producto.
+Utilizar y estabilizar la versión 1.2.0 antes de cerrar los requisitos de 2.0.0.
+Ese hito abordará el despliegue en homelab, HTTPS, secretos, doble factor,
+copias, restauración y monitorización. SmartWallet es el nombre definitivo del
+producto.
 
 ## Implementado hasta ahora
 
@@ -135,6 +141,9 @@ posterior. SmartWallet es el nombre definitivo del producto.
 - Portada `Mis proyectos` con identidad, miembros, rol y última actividad por
   proyecto, además de una actividad reciente común que identifica siempre el
   proyecto y no mezcla importes.
+- Tarjeta equilibrada por proyecto con presupuesto disponible, barra de
+  progreso, gasto neto y porcentaje del mes actual, sin mezclar importes ni
+  crear meses implícitamente al consultar proyectos archivados.
 - Selector visible dentro de cada proyecto para cambiar directamente entre los
   espacios accesibles, conservando color, icono y estado archivado.
 - Alta automática del creador como propietario y de una cuenta principal con su
@@ -159,6 +168,9 @@ posterior. SmartWallet es el nombre definitivo del producto.
   crear más de dos niveles.
 - Presupuesto mensual común, editable solo por propietarios, con límite total y
   límites opcionales en categorías principales.
+- Límites opcionales por subcategoría con consumo jerárquico, devoluciones,
+  importes sin asignar, copia mensual y conservación histórica de categorías
+  archivadas.
 - Plantillas de presupuesto con aplicación solo al mes elegido o al mes actual y
   los siguientes, sin arrastrar sobrantes.
 - Cierre mensual no bloqueante con presupuesto inicial, gasto neto, sobrante,
@@ -214,6 +226,11 @@ posterior. SmartWallet es el nombre definitivo del producto.
   restaurar el movimiento vinculado.
 - Varias etiquetas por movimiento y serie recurrente, con creación disponible
   para todos los miembros y administración, archivado y fusión por propietarios.
+- Hasta diez campos personalizados activos por proyecto, de texto, número,
+  fecha o sí/no, integrados en movimientos, planificaciones, recurrencias,
+  filtros, CSV y auditoría.
+- Cinco campos opcionales de ejemplo en cada proyecto para mostrar su uso sin
+  imponer valores iniciales.
 - Filtro por etiqueta en el historial y conservación de etiquetas archivadas en
   los movimientos antiguos sin permitir utilizarlas en operaciones nuevas.
 - Exportación CSV del proyecto completo o de la vista mensual filtrada, con
@@ -237,6 +254,8 @@ posterior. SmartWallet es el nombre definitivo del producto.
   incluido el filtrado por intervalos exactos de fechas para años completos.
 - Interfaz BEM adaptable desde 360 px y recursos servidos correctamente desde el
   entorno Docker.
+- Temas automático, claro y oscuro guardados por usuario y aplicados a toda la
+  interfaz, incluidas las páginas públicas.
 - Auditoría de 18 pantallas públicas y privadas en móvil, tableta y escritorio,
   sin desbordamientos globales ni errores estructurales de accesibilidad.
 - Navegación completa por teclado con foco visible y enlace para saltar al
@@ -250,7 +269,7 @@ posterior. SmartWallet es el nombre definitivo del producto.
 - Instalación limpia documentada, sin usuarios ficticios, con alta inicial desde
   la aplicación y explicación de puertos, correo local y diagnóstico.
 - Recorrido limpio verificado desde una copia sin configuración ni dependencias:
-  clave propia, 17 migraciones, cero usuarios iniciales y persistencia correcta
+  clave propia, 19 migraciones, cero usuarios iniciales y persistencia correcta
   después de detener y volver a iniciar todos los servicios.
 - Separación documentada y verificable entre la base persistente `smartwallet` y la
   base temporal `smartwallet_test`.
@@ -271,13 +290,14 @@ posterior. SmartWallet es el nombre definitivo del producto.
 - Generador de datos de desarrollo compatible con el correo normalizado y con una
   contraseña de demostración que respeta la longitud mínima.
 - Migraciones aplicadas en la base persistente de desarrollo.
-- 111 pruebas automáticas, con 860 comprobaciones, ejecutadas exclusivamente contra
+- 124 pruebas automáticas, con 985 comprobaciones, ejecutadas exclusivamente contra
   `smartwallet_test`.
 
 ## Documentación
 
 - [Requisitos aprobados](REQUISITOS.md)
 - [Requisitos de la versión 1.1](REQUISITOS_1_1.md)
+- [Requisitos de la versión 1.2](REQUISITOS_1_2.md)
 - [Experiencia de usuario](EXPERIENCIA_USUARIO.md)
 - [Sistema de diseño](SISTEMA_DISENO.md)
 - [Modelo de datos propuesto](MODELO_DATOS.md)
@@ -287,11 +307,14 @@ posterior. SmartWallet es el nombre definitivo del producto.
 - [Pruebas de rendimiento y escala](PRUEBAS_RENDIMIENTO.md)
 - [Pruebas de accesibilidad y aceptación](PRUEBAS_ACCESIBILIDAD.md)
 - [Accesibilidad y adaptación del calendario 1.1](PRUEBAS_ACCESIBILIDAD_1_1.md)
+- [Accesibilidad y adaptación de 1.2](PRUEBAS_ACCESIBILIDAD_1_2.md)
 - [Seguridad y privacidad](SEGURIDAD.md)
 - [Matriz de aceptación de 1.0](ACEPTACION_1_0.md)
 - [Preparación de la liberación 1.0](LIBERACION_1_0.md)
 - [Matriz de aceptación de 1.1](ACEPTACION_1_1.md)
 - [Preparación de la liberación 1.1](LIBERACION_1_1.md)
+- [Matriz de aceptación de 1.2](ACEPTACION_1_2.md)
+- [Preparación de la liberación 1.2](LIBERACION_1_2.md)
 - [Registro de cambios](CHANGELOG.md)
 - [Registro de decisiones](DECISIONES.md)
 - [Mejoras y futuras versiones](FUTURAS_VERSIONES.md)

@@ -39,6 +39,27 @@
             <div class="field filter-panel__search"><label class="field__label" for="filter-search">Buscar concepto</label><input class="field__control" id="filter-search" name="search" value="{{ request('search') }}"></div>
             <button class="button button--secondary filter-panel__button" type="submit">Aplicar filtros</button>
         </div>
+        @if ($customFieldDefinitions->isNotEmpty())
+            <details class="custom-filter-panel" @if(request()->filled('custom_filters')) open @endif>
+                <summary><strong>Filtros de información adicional</strong><small>Texto contenido, intervalos y valores sí/no</small></summary>
+                <div class="custom-filter-panel__grid">
+                    @foreach ($customFieldDefinitions as $definition)
+                        <fieldset class="custom-filter-field">
+                            <legend>{{ $definition->name }}@if($definition->isArchived()) <span class="field__optional">archivado</span>@endif</legend>
+                            @if ($definition->type === \App\Enums\CustomFieldType::Text)
+                                <label class="field"><span class="field__label">Contiene</span><input class="field__control" name="custom_filters[{{ $definition->id }}][value]" value="{{ request('custom_filters.'.$definition->id.'.value') }}" maxlength="255"></label>
+                            @elseif ($definition->type === \App\Enums\CustomFieldType::Number)
+                                <div class="custom-filter-field__range"><label class="field"><span class="field__label">Mínimo</span><input class="field__control" name="custom_filters[{{ $definition->id }}][min]" value="{{ request('custom_filters.'.$definition->id.'.min') }}" inputmode="decimal"></label><label class="field"><span class="field__label">Máximo</span><input class="field__control" name="custom_filters[{{ $definition->id }}][max]" value="{{ request('custom_filters.'.$definition->id.'.max') }}" inputmode="decimal"></label></div>
+                            @elseif ($definition->type === \App\Enums\CustomFieldType::Date)
+                                <div class="custom-filter-field__range"><label class="field"><span class="field__label">Desde</span><input class="field__control" name="custom_filters[{{ $definition->id }}][from]" value="{{ request('custom_filters.'.$definition->id.'.from') }}" type="date"></label><label class="field"><span class="field__label">Hasta</span><input class="field__control" name="custom_filters[{{ $definition->id }}][to]" value="{{ request('custom_filters.'.$definition->id.'.to') }}" type="date"></label></div>
+                            @else
+                                <label class="field"><span class="field__label">Valor</span><select class="field__control" name="custom_filters[{{ $definition->id }}][value]"><option value="">Cualquiera</option><option value="1" @selected(request('custom_filters.'.$definition->id.'.value') === '1')>Sí</option><option value="0" @selected(request('custom_filters.'.$definition->id.'.value') === '0')>No</option></select></label>
+                            @endif
+                        </fieldset>
+                    @endforeach
+                </div>
+            </details>
+        @endif
         <div class="filter-panel__footer">
             <p>La vista exportada respeta el mes y todos los filtros aplicados.</p>
             <div class="button-group"><a class="button button--secondary button--small" href="{{ route('movements.export', array_merge(request()->query(), ['project' => $project, 'scope' => 'filtered', 'month' => $month->format('Y-m')])) }}">Exportar esta vista CSV</a><a class="button button--quiet button--small" href="{{ route('movements.export', ['project' => $project, 'scope' => 'all']) }}">Exportar todo el proyecto</a></div>
@@ -60,7 +81,7 @@
                     @foreach ($movements as $movement)
                         <tr id="movement-{{ $movement->id }}">
                             <td data-label="Fecha">{{ $movement->occurred_on->format('d/m/Y') }}</td>
-                            <td data-label="Concepto"><strong>{{ $movement->concept }}</strong><span class="movement-type movement-type--{{ $movement->type->value }}">{{ $movement->type->label() }}</span>@if($movement->tags->isNotEmpty())<span class="movement-tags">@foreach($movement->tags as $tag)<span class="tag-chip tag-chip--small"># {{ $tag->name }}</span>@endforeach</span>@endif @if($movement->generated_automatically_at)<small>Generado automáticamente · visible en el calendario</small>@elseif($movement->plannedMovement)<small>Realizado desde una planificación · visible en el calendario</small>@elseif($movement->show_in_calendar)<small>Seleccionado para el calendario</small>@endif</td>
+                            <td data-label="Concepto"><strong>{{ $movement->concept }}</strong><span class="movement-type movement-type--{{ $movement->type->value }}">{{ $movement->type->label() }}</span>@if($movement->tags->isNotEmpty())<span class="movement-tags">@foreach($movement->tags as $tag)<span class="tag-chip tag-chip--small"># {{ $tag->name }}</span>@endforeach</span>@endif @if($movement->generated_automatically_at)<small>Generado automáticamente · visible en el calendario</small>@elseif($movement->plannedMovement)<small>Realizado desde una planificación · visible en el calendario</small>@elseif($movement->show_in_calendar)<small>Seleccionado para el calendario</small>@endif @if($movement->customFieldValues->isNotEmpty())<details class="movement-custom-fields"><summary>Información adicional</summary><dl>@foreach($movement->customFieldValues->sortBy(fn($value) => $value->definition->position) as $customValue)<div><dt>{{ $customValue->definition->name }}</dt><dd>{{ $customValue->displayValue() }}</dd></div>@endforeach</dl></details>@endif</td>
                             <td data-label="Categoría">{{ $movement->category?->name ?? '—' }}@if ($movement->subcategory)<small>{{ $movement->subcategory->name }}</small>@elseif ($movement->originalMovement)<small>Vinculada a {{ $movement->originalMovement->concept }}</small>@endif</td>
                             <td data-label="Cuenta">{{ $movement->account?->name }}@if ($movement->destinationAccount)<small>→ {{ $movement->destinationAccount->name }}</small>@endif</td>
                             <td data-label="Miembro">{{ $movement->paidBy?->name ?? '—' }}</td>
